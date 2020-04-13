@@ -1,3 +1,7 @@
 {
-    "python.pythonPath": "/usr/bin/python3.5"
+    "python.pythonPath": "/usr/bin/python3",
+    "python.linting.pylintArgs": [
+        "--disable=all",
+        "--enable=F,E,unreachable,duplicate-key,unnecessary-semicolon,global-variable-not-assigned,unused-variable,binary-op-exception,bad-format-string,anomalous-backslash-in-string,bad-open-mode"
+    ]
 }
