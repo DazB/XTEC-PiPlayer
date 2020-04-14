@@ -1,2 +1,2 @@
-.vscode
-
+# Byte-compiled python files
+__pycache__/
