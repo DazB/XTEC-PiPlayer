@@ -28,6 +28,7 @@ class Player:
 
     def quit(self):
         """Shut down program"""
+        self.player.quit()
         print('Player Shutdown')
 
 class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
@@ -40,6 +41,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """TCP Server Class"""
+
     # Allow address to be reused (i.e. reopen after unexpected close)
     allow_reuse_address = True  
 
@@ -49,24 +51,13 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.server_close()
         print('TCP Shutdown')
 
-class GracefulExit:
-
-    def __enter__(self):
-        signal.signal(signal.SIGINT, self.quit)
-        signal.signal(signal.SIGTERM, self.quit)
-
-    def __exit__(self, type, value, traceback):
-        pass
-
-    def quit(self, signum, stack):
-        print('Received signal: ', signum)
 
 def cleanup(signum, frame):
     """Cleanup function. Calls cleanup functions in each class"""
-    # TODO: is there a better way to do this? Global function seems wrong
     print('Cleaning up')
-    ThreadedTCPServer.quit
-    Player.quit
+    tcp_server.quit()
+    player.quit()
+    sys.exit('Quitting program')
 
 # Main entry point.
 if __name__ == '__main__':
@@ -80,8 +71,7 @@ if __name__ == '__main__':
     tcp_retry = 0
     while (tcp_server is None) or (tcp_retry == 10):
         try:
-            tcp_server = ThreadedTCPServer(('localhost', 9999), ThreadedTCPRequestHandler)
-            
+            tcp_server = ThreadedTCPServer(('localhost', 9999), ThreadedTCPRequestHandler)  
         except Exception as ex:
             tcp_retry += 1
             print('Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
