@@ -7,18 +7,20 @@ import threading
 class PlayerTCPServer():
 
     def __init__(self, player):
+        """Initalise TCP server and handler"""
         self.player = player
-        # Dictionary of commands
+
+        # Dictionary of commands. Each one calls a different function in player
         self.command_dict = {
             b'PL': self.player.play
         }
 
-        # Create the server
+        # Try to create the server
         self.server = None
         tcp_retry = 0
         while self.server is None:
             try:
-                self.server = self.ThreadedTCPServer(('localhost', 9999), self.shit(self.command_dict))  
+                self.server = self.ThreadedTCPServer(('localhost', 9999), self.dynamic_handler(self.command_dict))  
             except Exception as ex:
                 tcp_retry += 1
                 print('Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
@@ -33,28 +35,37 @@ class PlayerTCPServer():
         server_thread.daemon = True
         server_thread.start()
 
-    def shit(self, command_dict):
+    def dynamic_handler(self, command_dict):
+        """Function to dynamically create the TCP handler class, so we can 
+        pass it player commands for the handle method
+        Had to do this way, because don't know other way to pass just the class to 
+        Server class that has been extended"""
+
         class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             """TCP Request Handler class"""
 
             def __init__(self, *args):
+                """Initalise with commands and pass rest to super"""
                 self.command_dict = command_dict
                 super().__init__(*args)
 
             def handle(self):
+                """Handles incoming TCP data"""
                 self.data = self.rfile.readline().strip()   # Get data
                 
                 print("{} wrote:".format(self.client_address[0]))
                 print(self.data)
 
-                command = self.data[0:2] 
+                # Get first 2 letters, then search dictionary to call corresponding command
+                # Calls unknown_command by default (essentially a switch, but python don't do switch)
+                command = self.data[0:2]    
                 command_func = self.command_dict.get(command, self.unknown_command)
                 command_func()
 
             def unknown_command(self):
                 print('Unknown command')
                 
-        return ThreadedTCPRequestHandler
+        return ThreadedTCPRequestHandler    # return the class when function is called
 
 
     class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
