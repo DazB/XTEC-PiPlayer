@@ -24,6 +24,11 @@ class Player:
 
     def run(self):
         """Main program loop"""
+        pass
+
+    def play(self):
+        """Main program loop"""
+        print('Player play')
         self.player.play()
 
     def quit(self):
@@ -34,10 +39,26 @@ class Player:
 class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
     """TCP Request Handler class"""
 
+    def __init__(self, request, client_address, server):
+        # Dictionary of commands
+        self.command_dict = {
+            b'PL': player.play
+        }
+        # Extends StreamRequestHandler
+        super().__init__(request, client_address, server)
+
     def handle(self):
-        self.data = self.rfile.readline().strip()
+        self.data = self.rfile.readline().strip()   # Get data
+        
         print("{} wrote:".format(self.client_address[0]))
         print(self.data)
+
+        command = self.data[0:2]
+        command_func = self.command_dict.get(command, self.unknown_command)
+        command_func()
+
+    def unknown_command(self):
+        print('Unknown command')
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """TCP Server Class"""
@@ -66,7 +87,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
   
-    # Try create the server
+    # Create the server
     tcp_server = None
     tcp_retry = 0
     while (tcp_server is None) or (tcp_retry == 10):
