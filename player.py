@@ -4,14 +4,16 @@
 ## Pi Player
 #######################################
 
-from omxplayer.player import OMXPlayer
-from pathlib import Path
 import sys
-from time import sleep
 import signal
-# import socketserver
-# import socket
-# import threading
+import sched
+import time
+import os
+import logging
+from time import sleep
+from threading import Timer
+
+from omxplayer.player import OMXPlayer
 from tcp_server import PlayerTCPServer
 
 
@@ -20,18 +22,27 @@ class Player:
 
     def __init__(self):
         """Create an instance of the main video player application class"""
-        self.path = "/opt/vc/src/hello_pi/hello_video/test.h264" # Test file
-        self.omxplayer = OMXPlayer(self.path, dbus_name='org.mpris.MediaPlayer2.omxplayer1', pause=True, args=['--no-osd', '--no-keys', '-b'])
+        self.video_path = "/home/pi/VideoPlayer/testfiles/bbb_sunflower_1080p_30fps_normal_Trim.mp4" # Test file
+        self.omxplayer = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer1', pause=True, args=['--no-osd', '--no-keys', '-b'])
+        self.player_end_timer = Timer(None, None)
 
     def run(self):
         pass
 
     def play(self):
         print('Player sent play command')
+        self.player_end_timer = Timer(self.omxplayer.duration(), self.end_of_video)
+        self.player_end_timer.start()
         self.omxplayer.play()
+
+    def end_of_video(self):
+        print('Video ended')
+        self.omxplayer.load(self.video_path, pause=True)
+        self.play()
 
     def quit(self):
         """Shut down program"""
+        self.player_end_timer.cancel()
         self.omxplayer.quit()
         print('Player Shutdown')
 
@@ -44,15 +55,28 @@ def cleanup(signum, frame):
 
 # Main entry point.
 if __name__ == '__main__':
-    print('Here we go....')
+    print('And here we go....')
+    LOG_FILENAME = 'debug.log'
+    logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+
     # Sets exit signals to call cleanup
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
   
-    try:
-        player = Player()   # Video player instance
-    except Exception as ex:
-        sys.exit('Unexpected error starting player: %s' % ex)
+    # Try to create the player
+    player = None
+    player_retry = 0
+    PLAYER_RETRY_DELAY = 2
+    PLAYER_MAX_RETRIES = 5
+    while player is None:
+        try:
+            player = Player()   # Video player instance
+        except Exception as ex:
+            if player_retry == PLAYER_MAX_RETRIES:
+                sys.exit('Cannot create Player. Is the path correct? : %s' % ex)
+            player_retry += 1
+            print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
+            sleep(PLAYER_RETRY_DELAY)
 
     # Create the server
     player_tcp_server = PlayerTCPServer(player)

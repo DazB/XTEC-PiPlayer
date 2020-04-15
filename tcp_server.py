@@ -22,10 +22,11 @@ class PlayerTCPServer():
             try:
                 self.server = self.ThreadedTCPServer(('localhost', 9999), self.dynamic_handler(self.command_dict))  
             except Exception as ex:
-                tcp_retry += 1
-                print('Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
                 if tcp_retry == 5:
                     sys.exit('Cannot create TCP Server: %s' % ex)
+                
+                tcp_retry += 1
+                print('Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
                 sleep(2)
 
         # Start a thread with the server -- that thread will then start one
