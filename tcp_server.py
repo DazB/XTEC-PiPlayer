@@ -12,7 +12,8 @@ class PlayerTCPServer():
 
         # Dictionary of commands. Each one calls a different function in player
         self.command_dict = {
-            b'PL': self.player.play
+            b'PL': self.player.play_command,
+            b'LP': self.player.loop_command
         }
 
         # Try to create the server
