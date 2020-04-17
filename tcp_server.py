@@ -5,6 +5,7 @@ from time import sleep
 import threading
 
 class PlayerTCPServer():
+    """TCP Server that handles connections to control the passed in player"""
 
     def __init__(self, player):
         """Initalise TCP server and handler"""
@@ -77,7 +78,7 @@ class PlayerTCPServer():
         allow_reuse_address = True  
 
         def quit(self):
-            """Cleanup TCP server"""
+            """Shutdown TCP server"""
             self.shutdown()
             self.server_close()
-            print('TCP Shutdown')
+            print('TCP Server: Shutdown')

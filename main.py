@@ -40,7 +40,7 @@ class App:
         while True:
             pass
 
-    def cleanup(self):
+    def cleanup(self, signum, frame):
         """Application cleanup"""
         print('App: Cleaning up')
         self.player_tcp_server.server.quit()
