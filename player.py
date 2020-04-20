@@ -1,7 +1,7 @@
 import sys
 import time
 import os
-from threading import Timer
+import threading
 
 from omxplayer.player import OMXPlayer
 from tcp_server import PlayerTCPServer
@@ -28,32 +28,29 @@ class Player:
         self.hidden_player.set_layer(HIDDEN_LAYER)
         
         # Event timer used to determine end of video. Set on play
-        # self.video_end_timer = Timer(0, None)
-
-        # Other player variables
-        self.loop = False
-        
+        # self.video_end_timer = Timer(0, None)       
 
     def run(self):
         pass
 
     def play_command(self):
+        """Play command sent to player. 
+        Sets loop to false, and plays video if not already playing"""
         print('Player: Play command')
-        self.loop = False
+        self.visible_player.set_loop(False)
         if not self.visible_player.is_playing():
             self._play()
 
     def loop_command(self):
+        """Loop command sent to player.
+        Sets loop to true, and plays video if not already playing"""
         print('Player: Loop')
-        
-        self.loop = True
-        self.visible_player.set_loop(self.loop)
-
+        self.visible_player.set_loop(True)
         if not self.visible_player.is_playing():
             self._play()
 
     def quit(self):
-        """Shut down player"""
+        """Shuts down player"""
         # self.video_end_timer.cancel()
         self.omxplayer_1.quit()
         self.omxplayer_2.quit()
@@ -64,14 +61,24 @@ class Player:
     def _play(self):
         # self.video_end_timer = Timer(self.visible_player.duration(), self._end_of_video)
         # self.video_end_timer.start()
+        # self.visible_player.play()
         self.visible_player.play()
+        wait_end_thread = threading.Thread(target=self._wait_until_end)
+        wait_end_thread.daemon = True
+        wait_end_thread.start()
+
+    def _wait_until_end(self):
+        try:
+            while self.visible_player.playback_status() != "Stopped":
+                time.sleep(0.01)
+        except Exception as ex:
+            print('_wait_until_end exception. Most likely player shutdown becuase of end of video, ' + 
+            'which is expected: %s', ex)
+        finally:
+            self._end_of_video()
 
     def _end_of_video(self):
         print('Player: End of video')
-        # if self.loop:
-        #     self.visible_player.set_position(0)
-        #     self._play()
-        # else:
         # Show the preloaded hidden player
         self.hidden_player.set_layer(VISIBLE_LAYER)
         self._switch_players()
