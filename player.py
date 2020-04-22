@@ -26,12 +26,10 @@ class Player:
         # Set layer of players so we show the correct one
         self.visible_player.set_layer(VISIBLE_LAYER)
         self.hidden_player.set_layer(HIDDEN_LAYER)
-        
+        # Visable player has started playing video
+        self.playing_in_progress = False
         # Event timer used to determine end of video. Set on play
         # self.video_end_timer = Timer(0, None)       
-
-    def run(self):
-        pass
 
     def play_command(self):
         """Play command sent to player. 
@@ -39,7 +37,18 @@ class Player:
         print('Player: Play command')
         self.visible_player.set_loop(False)
         if not self.visible_player.is_playing():
-            self._play()
+            if self.playing_in_progress == False:
+                self._play_from_start()
+            else:
+                self.visible_player.play()
+            
+
+    def pause_command(self):
+        """Pause command sent to player. 
+        Pauses video if playing"""
+        print('Player: Pause command')
+        if self.visible_player.is_playing():
+            self.visible_player.pause()
 
     def loop_command(self):
         """Loop command sent to player.
@@ -47,7 +56,7 @@ class Player:
         print('Player: Loop')
         self.visible_player.set_loop(True)
         if not self.visible_player.is_playing():
-            self._play()
+            self._play_from_start()
 
     def quit(self):
         """Shuts down player"""
@@ -58,16 +67,19 @@ class Player:
 
     ######################### Class utility functions ##################################
 
-    def _play(self):
+    def _play_from_start(self):
+        """Plays video, and starts thread to check for end of video"""
         # self.video_end_timer = Timer(self.visible_player.duration(), self._end_of_video)
         # self.video_end_timer.start()
         # self.visible_player.play()
         self.visible_player.play()
+        self.playing_in_progress = True
         wait_end_thread = threading.Thread(target=self._wait_until_end)
         wait_end_thread.daemon = True
         wait_end_thread.start()
 
     def _wait_until_end(self):
+        """Will constantly poll currently playing media to check if it's stopped"""
         try:
             while self.visible_player.playback_status() != "Stopped":
                 time.sleep(0.01)
@@ -78,11 +90,14 @@ class Player:
             self._end_of_video()
 
     def _end_of_video(self):
+        """On end of video, switch player layers"""
         print('Player: End of video')
         # Show the preloaded hidden player
         self.hidden_player.set_layer(VISIBLE_LAYER)
         self._switch_players()
         self._load_new_player_hidden()
+        # No longer playing
+        self.playing_in_progress = False 
 
     def _switch_players(self):
         """Switches players. Visible becomes Hidden and Hidden becomes Visible"""
@@ -94,12 +109,12 @@ class Player:
             self.hidden_player = self.omxplayer_2
 
     def _load_new_player_hidden(self):
+        """Loads the media for the hidden player"""
         if self.hidden_player == self.omxplayer_1:
-            self.omxplayer_1.quit()
+            # self.omxplayer_1.quit() Because old player will die, don't need to quit. Just let it die
             self.omxplayer_1 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer1', pause=True, args=['--no-osd', '--no-keys', '-b'])
             self.hidden_player = self.omxplayer_1
         else:
-            self.omxplayer_2.quit()
             self.omxplayer_2 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer2', pause=True, args=['--no-osd', '--no-keys', '-b'])
             self.hidden_player = self.omxplayer_2
         
