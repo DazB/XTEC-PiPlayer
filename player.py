@@ -11,59 +11,63 @@ from tcp_server import PlayerTCPServer
 VISIBLE_LAYER = 2
 HIDDEN_LAYER = 1
 
+#TODO: while coming up with a workable solution for the actual video player, we're gonna start work with
+# other things, because I'm stressing myself out by going in circles.
 class Player:
     """Main video player class"""
 
     def __init__(self):
         """Create an instance of the main video player application class"""
-        self.video_path = "/home/pi/VideoPlayer/testfiles/bbb_sunflower_1080p_30fps_normal_Trim.mp4" # Test file
-        # Init 2 OMX players
-        self.omxplayer_1 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer1', pause=True, args=['--no-osd', '--no-keys', '-b', '-g'])
-        self.omxplayer_2 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer2', pause=True, args=['--no-osd', '--no-keys', '-b', '-g'])
-        # Assign playeres to variables to make clear which ones are shown and hidden.
-        self.visible_player = self.omxplayer_1
-        self.hidden_player = self.omxplayer_2
-        # Set layer of players so we show the correct one
-        self.visible_player.set_layer(VISIBLE_LAYER)
-        self.hidden_player.set_layer(HIDDEN_LAYER)
-        # Visable player has started playing video
-        self.playing_in_progress = False
-        # Event timer used to determine end of video. Set on play
-        # self.video_end_timer = Timer(0, None)       
+        print("Player: Created instance")
+        # self.video_path = "/home/pi/VideoPlayer/testfiles/bbb_sunflower_1080p_30fps_normal_Trim.mp4" # Test file
+        # # Init 2 OMX players
+        # self.omxplayer_1 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer1', pause=True, args=['--no-osd', '--no-keys', '-b', '-g'])
+        # self.omxplayer_2 = OMXPlayer(self.video_path, dbus_name='org.mpris.MediaPlayer2.omxplayer2', pause=True, args=['--no-osd', '--no-keys', '-b', '-g'])
+        # # Assign playeres to variables to make clear which ones are shown and hidden.
+        # self.visible_player = self.omxplayer_1
+        # self.hidden_player = self.omxplayer_2
+        # # Set layer of players so we show the correct one
+        # self.visible_player.set_layer(VISIBLE_LAYER)
+        # self.hidden_player.set_layer(HIDDEN_LAYER)
+        # # Visable player has started playing video
+        # self.playing_in_progress = False
+        # # Event timer used to determine end of video. Set on play
+        # # self.video_end_timer = Timer(0, None)       
 
     def play_command(self):
         """Play command sent to player. 
         Sets loop to false, and plays video if not already playing"""
         print('Player: Play command')
-        self.visible_player.set_loop(False)
-        if not self.visible_player.is_playing():
-            if self.playing_in_progress == False:
-                self._play_from_start()
-            else:
-                self.visible_player.play()
+        # self.visible_player.set_loop(False)
+        # if not self.visible_player.is_playing():
+        #     if self.playing_in_progress == False:
+        #         self._play_from_start()
+        #     else:
+        #         self.visible_player.play()
             
 
     def pause_command(self):
         """Pause command sent to player. 
         Pauses video if playing"""
         print('Player: Pause command')
-        if self.visible_player.is_playing():
-            self.visible_player.pause()
+        # if self.visible_player.is_playing():
+        #     self.visible_player.pause()
 
     def loop_command(self):
         """Loop command sent to player.
         Sets loop to true, and plays video if not already playing"""
-        print('Player: Loop')
-        self.visible_player.set_loop(True)
-        if not self.visible_player.is_playing():
-            self._play_from_start()
+        print('Player: Loop command')
+        # self.visible_player.set_loop(True)
+        # if not self.visible_player.is_playing():
+        #     self._play_from_start()
 
     def quit(self):
         """Shuts down player"""
-        # self.video_end_timer.cancel()
-        self.omxplayer_1.quit()
-        self.omxplayer_2.quit()
         print('Player: Shutdown')
+        # self.video_end_timer.cancel()
+        # self.omxplayer_1.quit()
+        # self.omxplayer_2.quit()
+
 
     ######################### Class utility functions ##################################
 
