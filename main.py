@@ -38,7 +38,7 @@ class App:
     def run(self):
         """Main app loop"""
         while True:
-            pass
+            time.sleep(10)
 
     def cleanup(self, signum, frame):
         """Application cleanup"""

@@ -1,0 +1,65 @@
+{% include 'header.html' %}
+<table style="border:#eee outset 0px; background-color:#eee; border-spacing:8px">
+    <tr>
+        <td style="width:80px; vertical-align:top; border:#888 inset 0px; background-color:#eee; padding:0px">
+            {% include 'menu.html' %}
+        </td>
+        <td>
+            <form action="dout.html" method=get>
+        <td
+            style="width:600px; height:300px; vertical-align:top; border:#888 inset 0px; padding:0px; background-color:#fff;">
+            <table style="border:#FFF outset 0px; border-spacing:2px">
+                <tr>
+                    <td style="height:22px;vertical-align:top;border:#888 inset 0px; padding:4px">
+                        <h2>Digital Outputs:
+                        </h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height:22px;vertical-align:top;border:#888 inset 0px; padding:4px">
+                        <h3>Digital Output 1:</h3>
+                    </td>
+                    <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
+                        <select id="DO1M" name="DO1M" size=1>
+                            <option value="0" ~DO1Sel(0)~>Not used</option>
+                            <option value="1" ~DO1Sel(1)~>On when any file is playing</option>
+                            <option value="2" ~DO1Sel(2)~>Pulse when any file starts playing
+                            </option>
+                            <option value="3" ~DO1Sel(3)~>On when playing track #:</option>
+                            <option value="4" ~DO1Sel(4)~>Pulse when playing track #:</option>
+                            <option value="5" ~DO1Sel(5)~>On when the player boots</option>
+                            <option value="6" ~DO1Sel(6)~>Pulse when the player boots</option>
+                        </select>&nbsp#
+                        <input id="D01On" type=number name="DO1Trk" value="~DO1Trk~" autocomplete=off min="0" max="9999"
+                            step=1>
+                        <p></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height:22px;vertical-align:top;border:#888 inset 0px; padding:4px">
+                        <h3>Digital Output 2:</h3>
+                    </td>
+                    <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
+                        <select id="DO2M" name="DO2M" size=1>
+                            <option value="0" ~DO2Sel(0)~>Not used</option>
+                            <option value="1" ~DO2Sel(1)~>On when any file is playing</option>
+                            <option value="2" ~DO2Sel(2)~>Pulse when any file starts playing
+                            </option>
+                            <option value="3" ~DO2Sel(3)~>On when playing track #:</option>
+                            <option value="4" ~DO2Sel(4)~>Pulse when playing track #:</option>
+                            <option value="5" ~DO2Sel(5)~>On when the player boots</option>
+                            <option value="6" ~DO2Sel(6)~>Pulse when the player boots</option>
+                        </select>&nbsp#
+                        <input id="DO2Trk" type=number name="DO2Trk" value="~DO2Trk~" autocomplete=off min="0"
+                            max="9999" step=1>
+                        <p></p>
+                    </td>
+                </tr>
+            </table>
+            &nbsp
+            <input id="submit" type=submit name="submit" value="Save">&nbsp&nbsp
+            <i1>Save settings to device</i1>
+        </td>
+    </tr>
+</table>
+{% include 'footer.html' %}

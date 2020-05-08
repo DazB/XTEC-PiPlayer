@@ -1,0 +1,22 @@
+{% include 'header.html' %}
+<table style="border:#eee outset 0px; background-color:#eee; border-spacing:8px">
+    <tr>
+        <td style="width:80px; vertical-align:top; border:#888 inset 0px; background-color:#eee; padding:0px">
+            {% include 'menu.html' %}
+        </td>
+        <td>
+        <td
+            style="width:600px; height:300px; vertical-align:top; border:#888 inset 0px; padding:0px; background-color:#fff;">
+            <h2>General Save Error</h2>
+            <centre>The device returned a general error. Please contact XTEC Industries and let us
+                know what you did and what happened.
+                <p></p>Click the Back button, check your data, and try again. We appologize for the
+                trouble.
+                <p></p>
+                <form><input type="button" value="Back" onClick="history.go(-1); return true;">
+                </form>
+            </centre>
+        </td>
+    </tr>
+</table>
+{% include 'footer.html' %}

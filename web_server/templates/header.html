@@ -1,0 +1,134 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset=UTF-8>
+    <title>XTEC PiPlayer</title>
+    <style>
+        body {
+            color: black;
+            font-family: Sans-serif;
+            font-size: 80%
+        }
+
+        n1 {
+            color: black;
+            font-family: Sans-serif;
+            font-size: 90%
+        }
+
+        i1 {
+            color: black;
+            font-family: Sans-serif;
+            font-style: italic;
+            font-size: 80%
+        }
+
+        h1 {
+            color: #000;
+            font-family: Sans-serif;
+            font-size: 200%;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 1px;
+            margin-bottom: 1px
+        }
+
+        h2 {
+            color: black;
+            font-family: Sans-serif;
+            font-size: 120%;
+            font-weight: bold;
+            text-align: left;
+            margin-top: 1px;
+            margin-bottom: 1px
+        }
+
+        h3 {
+            color: #404040;
+            font-family: Sans-serif;
+            font-size: 90%;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 1px;
+            margin-bottom: 1px
+        }
+
+        menu1 {
+            color: #303030;
+            font-family: Sans-serif;
+            font-size: 100%;
+            margin-top: 1px;
+            margin-bottom: 1px
+        }
+
+        menu2 {
+            color: #3030f0;
+            font-family: Sans-serif;
+            font-weight: bold;
+            font-size: 100%;
+            margin-top: 1px;
+            margin-bottom: 1px
+        }
+
+        input[type=submit] {
+            font-family: Sans-serif;
+            font-size: 100%;
+            font-weight: bold;
+            background: #dfd url(image) 0 0 no-repeat;
+            border-radius: 10%;
+            box-shadow: 0 0 4px gray
+        }
+
+        a:link {
+            color: #505050;
+            text-decoration: none
+        }
+
+        a:visited {
+            color: #505050;
+            text-decoration: none
+        }
+
+        a:hover {
+            color: #505050;
+            text-decoration: none
+        }
+
+        a:active {
+            color: #0000a0;
+            text-decoration: none
+        }
+
+        .hoverTable {
+            width: 120px;
+            border-collapse: collapse
+        }
+
+        .hoverTable td {
+            padding: 8px;
+            border: #4e95f4 1px solid
+        }
+
+        .hoverTable tr {
+            background: #eee
+        }
+
+        .hoverTable tr:hover {
+            background-color: #d0d0d0
+        }
+    </style>
+</head>
+
+<body>
+    <table style="border:rgb(255, 255, 255) outset 0;border-spacing:0">
+        <tr>
+            <td style=width:80px;height:25px;vertical-align:middle;background-color:#FFF;padding:0>
+                <img src="{{url_for('static', filename='logo.png')}}" width="80" height="25" />
+            </td>
+            <td style=width:600px;height:25px;vertical-align:middle;background-color:#FFF;padding:0>
+                <h1>XTEC PiPlayer</h1>
+            </td>
+        </tr>
+    </table>
+    <h2>Device Configuration</h2>

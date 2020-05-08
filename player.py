@@ -45,7 +45,8 @@ class Player:
         Sets loop to true, and plays video if not already playing"""
         print('Player: Loop command')
         self.mpv_player['loop-file'] = 'inf'
-
+        self.mpv_player['pause'] = False  
+        
     def quit(self):
         """Shuts down player"""
         print('Player: Shutdown')
