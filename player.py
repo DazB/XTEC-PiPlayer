@@ -4,7 +4,6 @@ import os
 import mpv
 from tcp_server import PlayerTCPServer
 
-
 class Player:
     """Main video player class"""
 
@@ -12,20 +11,29 @@ class Player:
         """Create an instance of the main video player application class"""
         print("Player: Created instance")
         # Init mpv player with options 
-        self.mpv_player = mpv.MPV()
-        self.mpv_player['hwdec'] = 'rpi'            # RPI decoder. Setting makes loading faster, as opposed to letting mpv decide 
-        self.mpv_player['vo'] = 'rpi'               # RPI output. Same as above.
-        self.mpv_player['cache'] = 'yes'            # Enable cache
-        self.mpv_player['rpi-background'] = 'yes'   # Black background behind video
-        self.mpv_player['rpi-osd'] = 'no'           # No OSD (On Screen Display) layer
-        # self.mpv_player['merge-files'] = True       # Pretend that all files passed to mpv are concatenated into a single, big file.
-        self.mpv_player['keep-open'] = 'yes'        # Do not terminate when playing or seeking beyond the end of the file
-        self.mpv_player['idle'] = 'yes'             # Makes mpv wait idly instead of quitting when there is no file to play
-        self.mpv_player['pause'] = True             # Start paused
-        self.mpv_player.fullscreen = True           # Fullscreen
+        
+        self.mpv_player = mpv.MPV(config=False, log_handler=print) #, log_handler=print
+        self.mpv_player.set_loglevel('debug')
+        self.mpv_player['hwdec'] = 'rpi'                    # RPI decoder. Setting makes loading faster, as opposed to letting mpv decide 
+        self.mpv_player['vo'] = 'rpi'                       # RPI output. Same as above.
+        self.mpv_player['demuxer-thread'] = 'yes'           # Run the demuxer in a separate thread
+        self.mpv_player['demuxer'] = 'lavf'                 # libavformat Demuxer
+        self.mpv_player['demuxer-lavf-probe-info'] = 'no'   # Whether to probe stream information
+        self.mpv_player['cache'] = 'yes'                    # Enable cache
+        self.mpv_player['demuxer-seekable-cache'] = 'yes'   # Seeking can use the demuxer cache
+        # self.mpv_player['hr-seek'] = 'yes'                   # Use precise seeks whenever possible
+        self.mpv_player['hr-seek-framedrop'] = 'no'         # Do not allow the video decoder to drop frames during seek
+        self.mpv_player['vf'] = 'null'                      # No videofilters. Speeds up looping and loading explicitly stating it
+        self.mpv_player['rpi-background'] = 'yes'           # Black background behind video
+        self.mpv_player['rpi-osd'] = 'no'                   # No OSD (On Screen Display) layer
+        self.mpv_player['keep-open'] = 'yes'                # Do not terminate when playing or seeking beyond the end of the file
+        self.mpv_player['idle'] = 'yes'                     # Makes mpv wait idly instead of quitting when there is no file to play
+        self.mpv_player['pause'] = True                     # Start paused
+        self.mpv_player.fullscreen = True                   # Fullscreen
 
         self.video_path = '/home/pi/coin.mp4' # Test file
         self.mpv_player.loadfile(self.video_path)  
+        
 
     def play_command(self):
         """Play command sent to player. 
