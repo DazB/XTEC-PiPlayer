@@ -13,6 +13,7 @@ class PlayerTCPServer():
 
         # Dictionary of commands. Each one calls a different function in player
         self.command_dict = {
+            b'LD': self.player.load_command,
             b'PL': self.player.play_command,
             b'LP': self.player.loop_command,
             b'PA': self.player.pause_command
@@ -26,10 +27,10 @@ class PlayerTCPServer():
                 self.server = self.ThreadedTCPServer(('localhost', 9999), self.dynamic_handler(self.command_dict))  
             except Exception as ex:
                 if tcp_retry == 5:
-                    sys.exit('Cannot create TCP Server: %s' % ex)
+                    sys.exit('TCP Server: Cannot create TCP Server: %s' % ex)
                 
                 tcp_retry += 1
-                print('Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
+                print('TCP Server: Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
                 sleep(2)
 
         # Start a thread with the server -- that thread will then start one
@@ -41,9 +42,9 @@ class PlayerTCPServer():
 
     def dynamic_handler(self, command_dict):
         """Function to dynamically create the TCP handler class, so we can 
-        pass it player commands for the handle method
-        Had to do this way, because don't know other way to pass just the class to 
-        Server class that has been extended"""
+        pass it the player functions for the handle method.
+        Had to do this way, because don't know other way to pass just a class 
+        that has been extended (in this case this TCP Handler class) to the Server class"""
 
         class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             """TCP Request Handler class"""
@@ -61,13 +62,18 @@ class PlayerTCPServer():
                 print(self.data)
 
                 # Get first 2 letters, then search dictionary to call corresponding command
-                # Calls unknown_command by default (essentially a switch, but python don't do switch)
+                # Calls bad_command by default (essentially a switch, but python don't do switch)
                 command = self.data[0:2]    
-                command_func = self.command_dict.get(command, self.unknown_command)
-                command_func()
+                command_func = self.command_dict.get(command, self.bad_command)
+                try:
+                    msg_data = self.data[2:].decode()
+                    command_func(msg_data) # Pass rest of the data packet to the function (could be nothing)
+                except Exception as ex:
+                    print("TCP Handle: Error processing command: " + str(ex))
+                    self.bad_command()
 
-            def unknown_command(self):
-                print('Unknown command')
+            def bad_command(self):
+                print("Bad command")
                 
         return ThreadedTCPRequestHandler    # return the class when function is called
 
