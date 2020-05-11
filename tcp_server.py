@@ -16,7 +16,8 @@ class PlayerTCPServer():
             b'LD': self.player.load_command,
             b'PL': self.player.play_command,
             b'LP': self.player.loop_command,
-            b'PA': self.player.pause_command
+            b'PA': self.player.pause_command,
+            b'ST': self.player.stop_command
         }
 
         # Try to create the server

@@ -5,8 +5,9 @@ import glob
 import re
 
 # Constant values
-LOAD_SUCCESS = 1
-LOAD_FAILURE = 2
+LOAD_SUCCESS        = 1
+LOAD_BAD_COMMAND    = 2
+LOAD_NO_FILE        = 3
 
 class Player:
     """Main video player class"""
@@ -25,7 +26,7 @@ class Player:
         self.mpv_player['cache'] = 'yes'                    # Enable cache
         self.mpv_player['demuxer-seekable-cache'] = 'yes'   # Seeking can use the demuxer cache
         # self.mpv_player['hr-seek'] = 'yes'                   # Use precise seeks whenever possible
-        self.mpv_player['hr-seek-framedrop'] = 'no'         # Do not allow the video decoder to drop frames during seek
+        # self.mpv_player['hr-seek-framedrop'] = 'no'         # Do not allow the video decoder to drop frames during seek
         self.mpv_player['vf'] = 'null'                      # No videofilters. Speeds up looping and loading explicitly stating it
         self.mpv_player['rpi-background'] = 'yes'           # Black background behind video
         self.mpv_player['rpi-osd'] = 'no'                   # No OSD (On Screen Display) layer
@@ -43,7 +44,10 @@ class Player:
         self.video_folder = '/home/pi/'
         # self.video_path = '/home/pi/coin.mp4' # Test file
         # self.mpv_player.loadfile(self.video_path)  
-        
+    
+    ################################################################################
+    # Player command functions
+    ################################################################################
     def load_command(self, msg_data):
         """Load command sent to player. 
         Loads video number sent to it"""
@@ -74,13 +78,15 @@ class Player:
         print('Player: Loop command')
         self.mpv_player['loop-file'] = 'inf'
         self.mpv_player['pause'] = False  
-        
-    def quit(self, *args):
-        """Shuts down player
-        Ignores any other arguments"""
-        print('Player: Shutdown')
-        self.mpv_player.quit()
 
+    def stop_command(self, msg_data):
+        """Stop command sent to player.
+        Stops playback, and clears playlist. 
+        Essentially a quit without terminiating the player.
+        Ignores message data"""
+        print('Player: Stop command')
+        self.mpv_player.command('stop')
+        
     ################################################################################
     # Property Observer functions
     ################################################################################
@@ -91,8 +97,14 @@ class Player:
 
     
     ################################################################################
-    # Class utility functions
+    # Utility functions
     ################################################################################
+    def quit(self, *args):
+        """Shuts down player
+        Ignores any other arguments"""
+        print('Player: Shutdown')
+        self.mpv_player.quit()
+
     def _load_video(self, msg_data):
         """Loads video with passed in number"""
         msg_data.lstrip() # Remove leading or trailing whitespace
@@ -101,7 +113,7 @@ class Player:
             video_number = int(msg_data)
         except Exception as ex:
             print("Player: Load exception. Can't convert into number: " + str(ex))
-            return LOAD_FAILURE
+            return LOAD_BAD_COMMAND
 
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)
@@ -118,7 +130,7 @@ class Player:
                     self.mpv_player.loadfile(str(video_file.resolve()), mode='append')
                 return LOAD_SUCCESS
 
-        return LOAD_FAILURE
+        return LOAD_NO_FILE
 
         
 
