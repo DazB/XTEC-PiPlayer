@@ -51,33 +51,52 @@ class Player:
     def load_command(self, msg_data):
         """Load command sent to player. 
         Loads video number sent to it"""
-        if self._load_video(msg_data) == LOAD_SUCCESS:
-            print('Loaded video')
+        print('Player: Load command')
+        return_code = self._load_video(msg_data)  
+        if return_code == LOAD_SUCCESS:
+            return 'Load success'
+        elif return_code == LOAD_NO_FILE:
+            return 'Load failure: Could not find file'
+        elif return_code == LOAD_BAD_COMMAND:
+            return 'Load failure: Incorrect file number sent'
         else:
-            print('Error loading video')
+            return 'Load failure: Unknown'
 
     def play_command(self, msg_data):
         """Play command sent to player. 
         Sets loop to false, and plays video if not already playing
         Ignores message data"""
         print('Player: Play command')
-        self.mpv_player['loop-file'] = 'no'
-        self.mpv_player['pause'] = False          
+        # Check if idle active (no file loaded)
+        if self.mpv_player.idle_active == True:
+            return 'Play failure: no file loaded'
+        else: 
+            self.mpv_player['loop-file'] = 'no'
+            self.mpv_player['pause'] = False     
+            return 'Play success'     
 
     def pause_command(self, msg_data):
         """Pause command sent to player. 
         Pauses video if playing.
         Ignores message data"""
         print('Player: Pause command')
-        self.mpv_player['pause'] = True      
+        if self.mpv_player.idle_active == True:
+            return 'Pause failure: no file loaded'
+        else: 
+            self.mpv_player['pause'] = True
+            return 'Pause success' 
 
     def loop_command(self, msg_data):
         """Loop command sent to player.
         Sets loop to true, and plays video if not already playing.
         Ignores message data"""
         print('Player: Loop command')
-        self.mpv_player['loop-file'] = 'inf'
-        self.mpv_player['pause'] = False  
+        if self.mpv_player.idle_active == True:
+            return 'Loop failure: no file loaded'
+        else:
+            self.mpv_player['loop-file'] = 'inf'
+            self.mpv_player['pause'] = False
+            return 'Loop success' 
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
@@ -85,7 +104,11 @@ class Player:
         Essentially a quit without terminiating the player.
         Ignores message data"""
         print('Player: Stop command')
-        self.mpv_player.command('stop')
+        if self.mpv_player.idle_active == True:
+            return 'Stop failure: no file loaded'
+        else:
+            self.mpv_player.command('stop')
+            return 'Stop success'
         
     ################################################################################
     # Property Observer functions

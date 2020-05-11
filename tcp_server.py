@@ -67,8 +67,13 @@ class PlayerTCPServer():
                 command = self.data[0:2]    
                 command_func = self.command_dict.get(command, self.bad_command)
                 try:
+                    # Pass rest of the data packet to the function (could be nothing)
                     msg_data = self.data[2:].decode()
-                    command_func(msg_data) # Pass rest of the data packet to the function (could be nothing)
+                    # Execute player command
+                    response = command_func(msg_data)
+                    # Respond with whatever command returned
+                    self.wfile.write(response.encode())
+
                 except Exception as ex:
                     print("TCP Handle: Error processing command: " + str(ex))
                     self.bad_command()
