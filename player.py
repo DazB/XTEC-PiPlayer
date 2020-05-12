@@ -4,10 +4,18 @@ from pathlib import Path
 import glob
 import re
 
-# Constant values
-LOAD_SUCCESS        = 1
-LOAD_BAD_COMMAND    = 2
-LOAD_NO_FILE        = 3
+# Constant values. Return values for functions
+LOAD_SUCCESS                = 1
+LOAD_BAD_COMMAND            = 2
+LOAD_NO_FILE                = 3
+
+SEEK_SUCCESS                = 4
+SEEK_BAD_FORM               = 5
+SEEK_BAD_MM                 = 6
+SEEK_BAD_SS                 = 7
+SEEK_BAD_FF                 = 8
+SEEK_TOO_LONG               = 9
+SEEK_SUCCESS_FRAME_ERROR    = 10
 
 class Player:
     """Main video player class"""
@@ -52,12 +60,37 @@ class Player:
         """Load command sent to player. 
         Loads video number sent to it"""
         print('Player: Load command')
-        return_code = self._load_video(msg_data)  
-        if return_code == LOAD_SUCCESS:
-            return 'Load success'
-        elif return_code == LOAD_NO_FILE:
+        # Check if there is also a seek command in the load
+        if re.search(r'SE.*', msg_data):
+            load_command = re.sub(r'SE.*', ' ', msg_data)
+            load_return_code = self._load_video(load_command)   
+        else:
+            # No seek command. Do load as normal
+            load_return_code = self._load_video(msg_data)
+
+        if load_return_code == LOAD_SUCCESS:
+            if re.search(r'SE.*', msg_data):
+                seek_time = re.findall(r'SE.*', msg_data)[0][2:]
+                seek_return_code = self._seek_video(seek_time)
+                if seek_return_code == SEEK_SUCCESS:
+                    return 'Load and seek success'
+                elif seek_return_code == SEEK_BAD_FORM:
+                    return 'Load success. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+                elif seek_return_code == SEEK_BAD_MM:
+                    return 'Load success. Seek failure: mm must be between 00 and 59'
+                elif seek_return_code == SEEK_BAD_SS:
+                    return 'Load success. Seek failure: ss must be between 00 and 59'
+                elif seek_return_code == SEEK_BAD_FF:
+                    return 'Load success. Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
+                elif seek_return_code == SEEK_TOO_LONG:
+                    return 'Load success. Seek failure: sent time is more than video duration'
+                elif seek_return_code == SEEK_SUCCESS_FRAME_ERROR:
+                    return 'Load success. Seek success with frame seek error. Ignored ff for seek'
+            else:
+                return 'Load success'
+        elif load_return_code == LOAD_NO_FILE:
             return 'Load failure: Could not find file'
-        elif return_code == LOAD_BAD_COMMAND:
+        elif load_return_code == LOAD_BAD_COMMAND:
             return 'Load failure: Incorrect file number sent'
 
         return 'Load failure: Unknown'
@@ -117,46 +150,22 @@ class Player:
             return 'Seek failure: no file loaded'
         
         msg_data = msg_data.lstrip() # Remove leading whitespace
-        # Check time stamp is correct format
-        if re.match(r'^\d\d:\d\d:\d\d:\d\d$', msg_data) == None:
-            return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
-        
-        timestamp_parts = msg_data.split(':')
-       
-        # Add hour seek time
-        hours = int(timestamp_parts[0])
-        seekTime = hours * 3600
-        
-        # Add minutes seek time
-        mins = int(timestamp_parts[1])
-        if mins > 59:
-             return 'Seek failure: mm must be between 00 and 59'
-        seekTime = seekTime + (mins * 60)
-        
-        # Add seconds seek time
-        seconds = int(timestamp_parts[2])
-        if seconds > 59:
-             return 'Seek failure: ss must be between 00 and 59'
-        seekTime = seekTime + (seconds)
-        
-        # Add frame seek time
-        frames = int(timestamp_parts[3])
-        try:
-            container_fps = int(self.mpv_player.container_fps)
-            if frames > container_fps:
-                return 'Seek failure: ff must be between 00 and frame rate (' + str(container_fps) + ')'
-            if frames != 0:
-                seekTime = seekTime + ((1 / container_fps) * frames)
-        except Exception as ex:
-            return 'Seek: frame seek error. Ignoring ff for seek: ' + str(ex)
-        
-        # Check if seek time is actually within the video duration 
-        if seekTime > self.mpv_player.duration:
-            return 'Seek failure: sent time is more than video duration'
-        # Sikh
-        self.mpv_player.seek(seekTime, reference='absolute', precision='exact')
 
-        return 'Seek success'
+        self._seek_video(msg_data)
+        if SEEK_SUCCESS:
+            return 'Seek success'
+        elif SEEK_BAD_FORM:
+            return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+        elif SEEK_BAD_MM:
+            return 'Seek failure: mm must be between 00 and 59'
+        elif SEEK_BAD_SS:
+            return 'Seek failure: ss must be between 00 and 59'
+        elif SEEK_BAD_FF:
+            return 'Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
+        elif SEEK_TOO_LONG:
+            return 'Seek failure: sent time is more than video duration'
+        elif SEEK_SUCCESS_FRAME_ERROR:
+            return 'Seek success with frame seek error. Ignored ff for seek'
         
     ################################################################################
     # Property Observer functions
@@ -178,7 +187,9 @@ class Player:
 
     def _load_video(self, msg_data):
         """Loads video with passed in number"""
-        msg_data = msg_data.lstrip() # Remove leading whitespace
+        # Remove whitespace
+        msg_data = msg_data.lstrip()
+        msg_data = msg_data.strip()
         # Try to convert msg data into a video number. If can't, throw error
         try:
             video_number = int(msg_data)
@@ -203,6 +214,57 @@ class Player:
 
         return LOAD_NO_FILE
 
+    def _seek_video(self, seek_time):
+        """Seeks to passed in seek time"""
+        # Remove whitespace
+        seek_time = seek_time.lstrip()
+        seek_time = seek_time.strip()
+        # Check time stamp is correct format
+        if not re.match(r'^\d\d:\d\d:\d\d:\d\d$', seek_time):
+            return SEEK_BAD_FORM
+        
+        timestamp_parts = seek_time.split(':')
+       
+        # Add hour seek time
+        hours = int(timestamp_parts[0])
+        seekTime = hours * 3600
+        
+        # Add minutes seek time
+        mins = int(timestamp_parts[1])
+        if mins > 59:
+             return SEEK_BAD_MM
+        seekTime = seekTime + (mins * 60)
+        
+        # Add seconds seek time
+        seconds = int(timestamp_parts[2])
+        if seconds > 59:
+             return SEEK_BAD_SS
+        seekTime = seekTime + (seconds)
+        
+        # Add frame seek time
+        frames = int(timestamp_parts[3])
+        frame_error = False
+        try:
+            container_fps = int(self.mpv_player.container_fps)
+            if frames > container_fps:
+                return SEEK_BAD_FF
+            if frames != 0:
+                seekTime = seekTime + ((1 / container_fps) * frames)
+        except Exception as ex:
+            print('Seek: frame seek error. Ignoring ff for seek: ' + str(ex))
+            frame_error = True
+        
+        # Check if seek time is actually within the video duration 
+        if seekTime > self.mpv_player.duration:
+            return SEEK_TOO_LONG
+
+        # Sikh
+        self.mpv_player.seek(seekTime, reference='absolute', precision='exact')
+        
+        if frame_error:
+            return SEEK_SUCCESS_FRAME_ERROR
+        else:    
+            return SEEK_SUCCESS
         
 
         
