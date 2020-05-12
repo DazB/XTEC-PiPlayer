@@ -17,7 +17,8 @@ class PlayerTCPServer():
             b'PL': self.player.play_command,
             b'LP': self.player.loop_command,
             b'PA': self.player.pause_command,
-            b'ST': self.player.stop_command
+            b'ST': self.player.stop_command,
+            b'SE': self.player.seek_command
         }
 
         # Try to create the server
@@ -67,11 +68,10 @@ class PlayerTCPServer():
                 command = self.data[0:2]    
                 command_func = self.command_dict.get(command, self.bad_command)
                 try:
-                    # Pass rest of the data packet to the function (could be nothing)
+                    # Pass rest of the data packet to the function (could be nothing), and execute player command
                     msg_data = self.data[2:].decode()
-                    # Execute player command
                     response = command_func(msg_data)
-                    # Respond with whatever command returned
+                    # Respond with whatever player command returned
                     self.wfile.write(response.encode())
 
                 except Exception as ex:
@@ -79,7 +79,7 @@ class PlayerTCPServer():
                     self.bad_command()
 
             def bad_command(self):
-                print("Bad command")
+                self.wfile.write('Error: unknown command'.encode())
                 
         return ThreadedTCPRequestHandler    # return the class when function is called
 
