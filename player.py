@@ -3,19 +3,27 @@ from tcp_server import PlayerTCPServer
 from pathlib import Path
 import glob
 import re
+import enum
+import subprocess
+import shlex
+import json
+from asteval import Interpreter
 
-# Constant values. Return values for functions
-LOAD_SUCCESS                = 1
-LOAD_BAD_COMMAND            = 2
-LOAD_NO_FILE                = 3
+# Load return codes 
+class Load_Result(enum.Enum): 
+    LOAD_SUCCESS = 1
+    LOAD_BAD_COMMAND = 2
+    LOAD_NO_FILE = 3
 
-SEEK_SUCCESS                = 4
-SEEK_BAD_FORM               = 5
-SEEK_BAD_MM                 = 6
-SEEK_BAD_SS                 = 7
-SEEK_BAD_FF                 = 8
-SEEK_TOO_LONG               = 9
-SEEK_SUCCESS_FRAME_ERROR    = 10
+# Seek return codes 
+class Seek_Result(enum.Enum): 
+    SEEK_SUCCESS                = 1
+    SEEK_BAD_FORM               = 2
+    SEEK_BAD_MM                 = 3
+    SEEK_BAD_SS                 = 4
+    SEEK_BAD_FF                 = 5
+    SEEK_TOO_LONG               = 6
+    SEEK_SUCCESS_FRAME_ERROR    = 7
 
 class Player:
     """Main video player class"""
@@ -23,74 +31,61 @@ class Player:
     def __init__(self):
         """Create an instance of the main video player application class"""
         print("Player: Creating instance")
-        # Init mpv player with options 
-        self.mpv_player = mpv.MPV(config=False) #, log_handler=print
+        # Init mpv player with config file
+        self.mpv_player = mpv.MPV(config=True, config_dir='./') #, log_handler=print
         # self.mpv_player.set_loglevel('debug')
-        self.mpv_player['hwdec'] = 'rpi'                    # RPI decoder. Setting makes loading faster, as opposed to letting mpv decide 
-        self.mpv_player['vo'] = 'rpi'                       # RPI output. Same as above.
-        self.mpv_player['demuxer-thread'] = 'yes'           # Run the demuxer in a separate thread
-        self.mpv_player['demuxer'] = 'lavf'                 # libavformat Demuxer
-        self.mpv_player['demuxer-lavf-probe-info'] = 'no'   # Whether to probe stream information
-        self.mpv_player['cache'] = 'yes'                    # Enable cache
-        self.mpv_player['demuxer-seekable-cache'] = 'yes'   # Seeking can use the demuxer cache
-        # self.mpv_player['hr-seek'] = 'yes'                   # Use precise seeks whenever possible
-        # self.mpv_player['hr-seek-framedrop'] = 'no'         # Do not allow the video decoder to drop frames during seek
-        self.mpv_player['vf'] = 'null'                      # No videofilters. Speeds up looping and loading explicitly stating it
-        self.mpv_player['rpi-background'] = 'yes'           # Black background behind video
-        self.mpv_player['rpi-osd'] = 'no'                   # No OSD (On Screen Display) layer
-        # self.mpv_player['keep-open'] = 'yes'                # Do not terminate when playing or seeking beyond the end of the file
-        self.mpv_player['prefetch-playlist'] = 'yes'        # Prefetch next playlist entry while playback of the current entry is ending
-        self.mpv_player['idle'] = 'yes'                     # Makes mpv wait idly instead of quitting when there is no file to play
-        self.mpv_player['pause'] = True                     # Start paused
-        self.mpv_player.fullscreen = True                   # Fullscreen
-        self.mpv_player['ontop'] = True                     # Makes the player window stay on top of other windows.
-        self.mpv_player['force-window'] = 'yes'             # Create a video output window even if there is no video
 
         # Assign property observers that call functions when a property changes
         self.mpv_player.observe_property('idle-active', self.idle_observer)
 
-        self.video_folder = '/home/pi/'
-        # self.video_path = '/home/pi/coin.mp4' # Test file
-        # self.mpv_player.loadfile(self.video_path)  
+        self.video_folder = 'testfiles/' # TODO: this will obvs change
     
     ################################################################################
     # Player command functions
     ################################################################################
     def load_command(self, msg_data):
-        """Load command sent to player. 
-        Loads video number sent to it"""
+        """Load command sent to player.
+        Loads video number sent to it. Can also be combined with seek command to seek 
+        loaded video."""
         print('Player: Load command')
+        # seek_return_code = None
+        # load_return_code = None
         # Check if there is also a seek command in the load
-        if re.search(r'SE.*', msg_data):
-            load_command = re.sub(r'SE.*', ' ', msg_data)
-            load_return_code = self._load_video(load_command)   
-        else:
-            # No seek command. Do load as normal
-            load_return_code = self._load_video(msg_data)
+        # if re.search(r'SE.*', msg_data):
+        #     # There is a seek command
 
-        if load_return_code == LOAD_SUCCESS:
-            if re.search(r'SE.*', msg_data):
-                seek_time = re.findall(r'SE.*', msg_data)[0][2:]
-                seek_return_code = self._seek_video(seek_time)
-                if seek_return_code == SEEK_SUCCESS:
+        #     # OKAY so best way i can think of solving this is using ffprobe library, and embedding the seek
+        #     # shit in the load (maybe a seperate load function with seek) and do it like that. 
+
+        #     seek_time = re.findall(r'SE.*', msg_data)[0][2:]
+        #     (seek_return_code, seek_time_secs) = self._get_seek_time(seek_time)
+        #     load_command = re.sub(r'SE.*', ' ', msg_data)
+        #     load_return_code = self._load_video(load_command, start_time_secs=seek_time_secs) 
+        # else:
+        
+        load_return_code, seek_return_code = self._load_video(msg_data)
+
+        if load_return_code == Load_Result.LOAD_SUCCESS:
+            if seek_return_code != None:
+                if seek_return_code == Seek_Result.SEEK_SUCCESS:
                     return 'Load and seek success'
-                elif seek_return_code == SEEK_BAD_FORM:
-                    return 'Load success. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
-                elif seek_return_code == SEEK_BAD_MM:
-                    return 'Load success. Seek failure: mm must be between 00 and 59'
-                elif seek_return_code == SEEK_BAD_SS:
-                    return 'Load success. Seek failure: ss must be between 00 and 59'
-                elif seek_return_code == SEEK_BAD_FF:
-                    return 'Load success. Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
-                elif seek_return_code == SEEK_TOO_LONG:
-                    return 'Load success. Seek failure: sent time is more than video duration'
-                elif seek_return_code == SEEK_SUCCESS_FRAME_ERROR:
+                elif seek_return_code == Seek_Result.SEEK_SUCCESS_FRAME_ERROR:
                     return 'Load success. Seek success with frame seek error. Ignored ff for seek'
+                elif seek_return_code == Seek_Result.SEEK_BAD_FORM:
+                    return 'File not loaded. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+                elif seek_return_code == Seek_Result.SEEK_BAD_MM:
+                    return 'File not loaded. Seek failure: mm must be between 00 and 59'
+                elif seek_return_code == Seek_Result.SEEK_BAD_SS:
+                    return 'File not loaded. Seek failure: ss must be between 00 and 59'
+                elif seek_return_code == Seek_Result.SEEK_BAD_FF:
+                    return 'File not loaded. Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
+                elif seek_return_code == Seek_Result.SEEK_TOO_LONG:
+                    return 'File not loaded. Seek failure: sent time is more than video duration'
             else:
                 return 'Load success'
-        elif load_return_code == LOAD_NO_FILE:
+        elif load_return_code == Load_Result.LOAD_NO_FILE:
             return 'Load failure: Could not find file'
-        elif load_return_code == LOAD_BAD_COMMAND:
+        elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
             return 'Load failure: Incorrect file number sent'
 
         return 'Load failure: Unknown'
@@ -150,21 +145,24 @@ class Player:
             return 'Seek failure: no file loaded'
         
         msg_data = msg_data.lstrip() # Remove leading whitespace
-
-        self._seek_video(msg_data)
-        if SEEK_SUCCESS:
+        # Get seek time in seconds and result code
+        seek_result_code, seek_time_secs = self._get_seek_time(msg_data, self.mpv_player.container_fps, self.mpv_player.duration)
+        # Check result of getting the seek time
+        if seek_result_code == Seek_Result.SEEK_SUCCESS:
+            # Sikh
+            self.mpv_player.seek(seek_time_secs, reference='absolute', precision='exact')
             return 'Seek success'
-        elif SEEK_BAD_FORM:
+        elif seek_result_code == Seek_Result.SEEK_BAD_FORM:
             return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
-        elif SEEK_BAD_MM:
+        elif seek_result_code == Seek_Result.SEEK_BAD_MM:
             return 'Seek failure: mm must be between 00 and 59'
-        elif SEEK_BAD_SS:
+        elif seek_result_code == Seek_Result.SEEK_BAD_SS:
             return 'Seek failure: ss must be between 00 and 59'
-        elif SEEK_BAD_FF:
+        elif seek_result_code == Seek_Result.SEEK_BAD_FF:
             return 'Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
-        elif SEEK_TOO_LONG:
+        elif seek_result_code == Seek_Result.SEEK_TOO_LONG:
             return 'Seek failure: sent time is more than video duration'
-        elif SEEK_SUCCESS_FRAME_ERROR:
+        elif seek_result_code == Seek_Result.SEEK_SUCCESS_FRAME_ERROR:
             return 'Seek success with frame seek error. Ignored ff for seek'
         
     ################################################################################
@@ -186,16 +184,26 @@ class Player:
         self.mpv_player.quit()
 
     def _load_video(self, msg_data):
-        """Loads video with passed in number"""
+        """Loads video. Will also perform seek if there is a seek command included"""
         # Remove whitespace
         msg_data = msg_data.lstrip()
         msg_data = msg_data.strip()
+        
+        # Check if there is also a seek command with the load
+        seek = False
+        if re.search(r'SE.*', msg_data):
+            load_command = re.sub(r'SE.*', ' ', msg_data)
+            seek = True
+        else:
+            # No seek command
+            load_command = msg_data
+
         # Try to convert msg data into a video number. If can't, throw error
         try:
-            video_number = int(msg_data)
+            video_number = int(load_command)
         except Exception as ex:
             print("Player: Load exception. Can't convert into number: " + str(ex))
-            return LOAD_BAD_COMMAND
+            return Load_Result.LOAD_BAD_COMMAND, None
 
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)
@@ -203,68 +211,109 @@ class Player:
         for video_file in basepath.glob('*[0-9][0-9][0-9][0-9][0-9].mp4'):
             # Extract number. Get number at end of file name, remove the file extension part, cast into an int
             file_number = int(re.findall(r'\d\d\d\d\d\.mp4', video_file.name)[0][0:5])
+            # Check if we have a match
             if file_number == video_number:
-                # We have a match. Load the file
-                # Check if we currently idle. If so, replace the video
-                if self.mpv_player.idle_active == True:
-                    self.mpv_player.loadfile(str(video_file.resolve()), mode='replace')
+                # We have a match. Are we seeking?
+                if not seek:
+                    # Load video with no seek. Check if we currently idle. If so, replace the video
+                    if self.mpv_player.idle_active == True:
+                        self.mpv_player.loadfile(str(video_file.resolve()), mode='replace')
+                    else:
+                        self.mpv_player.loadfile(str(video_file.resolve()), mode='append')
+                    return Load_Result.LOAD_SUCCESS, None
                 else:
-                    self.mpv_player.loadfile(str(video_file.resolve()), mode='append')
-                return LOAD_SUCCESS
+                    # We are loading this file with a seek.
+                    # To do seek, we need to pass the video frames and duration. We use ffprobe to get
+                    # this info without loading the video
+                    fps, duration = self._get_fps_duration_metadata(str(video_file.resolve()))
+                    seek_timestamp = re.sub(r'.* SE', ' ', msg_data)
+                    seek_result, seek_time_secs = self._get_seek_time(seek_timestamp, fps, duration)
 
-        return LOAD_NO_FILE
+                    if (seek_result == Seek_Result.SEEK_SUCCESS) or (seek_result == Seek_Result.SEEK_SUCCESS_FRAME_ERROR):
+                        # Check if we currently idle. If so, replace the video. 
+                        # We are using our seek time to say where to start video .
+                        if self.mpv_player.idle_active == True:
+                            self.mpv_player.loadfile(str(video_file.resolve()), mode='replace', start=str(seek_time_secs))
+                        else:
+                            self.mpv_player.loadfile(str(video_file.resolve()), mode='append', start=str(seek_time_secs))
+                    
+                    return Load_Result.LOAD_SUCCESS, seek_result
 
-    def _seek_video(self, seek_time):
-        """Seeks to passed in seek time"""
+
+        return Load_Result.LOAD_NO_FILE, None
+
+    def _get_seek_time(self, seek_time, video_frames, video_duration):
+        """Gets seek time passed in seconds. Returns result. Done this way because in the case of LD, 
+        we may want to do a seek for a video that isn't this one"""
         # Remove whitespace
         seek_time = seek_time.lstrip()
         seek_time = seek_time.strip()
         # Check time stamp is correct format
         if not re.match(r'^\d\d:\d\d:\d\d:\d\d$', seek_time):
-            return SEEK_BAD_FORM
+            return Seek_Result.SEEK_BAD_FORM, 0
         
         timestamp_parts = seek_time.split(':')
        
         # Add hour seek time
-        hours = int(timestamp_parts[0])
-        seekTime = hours * 3600
+        seek_hours = int(timestamp_parts[0])
+        seek_time_secs = seek_hours * 3600
         
         # Add minutes seek time
-        mins = int(timestamp_parts[1])
-        if mins > 59:
-             return SEEK_BAD_MM
-        seekTime = seekTime + (mins * 60)
+        seek_mins = int(timestamp_parts[1])
+        if seek_mins > 59:
+             return Seek_Result.SEEK_BAD_MM, 0
+        seek_time_secs = seek_time_secs + (seek_mins * 60)
         
         # Add seconds seek time
-        seconds = int(timestamp_parts[2])
-        if seconds > 59:
-             return SEEK_BAD_SS
-        seekTime = seekTime + (seconds)
+        seek_seconds = int(timestamp_parts[2])
+        if seek_seconds > 59:
+             return Seek_Result.SEEK_BAD_SS, 0
+        seek_time_secs = seek_time_secs + (seek_seconds)
         
         # Add frame seek time
-        frames = int(timestamp_parts[3])
+        seek_frames = int(timestamp_parts[3])
         frame_error = False
-        try:
-            container_fps = int(self.mpv_player.container_fps)
-            if frames > container_fps:
-                return SEEK_BAD_FF
-            if frames != 0:
-                seekTime = seekTime + ((1 / container_fps) * frames)
-        except Exception as ex:
-            print('Seek: frame seek error. Ignoring ff for seek: ' + str(ex))
-            frame_error = True
+        
+        if video_frames == 0:
+            print('Seek: frame seek error. Ignoring ff for seek')
+            frame_error = True        
+        else:
+            if seek_frames > video_frames:
+                return Seek_Result.SEEK_BAD_FF, 0
+            else:
+                seek_time_secs = seek_time_secs + ((1 / video_frames) * seek_frames)
         
         # Check if seek time is actually within the video duration 
-        if seekTime > self.mpv_player.duration:
-            return SEEK_TOO_LONG
-
-        # Sikh
-        self.mpv_player.seek(seekTime, reference='absolute', precision='exact')
-        
+        if seek_time_secs > video_duration:
+            return Seek_Result.SEEK_TOO_LONG, 0
+       
         if frame_error:
-            return SEEK_SUCCESS_FRAME_ERROR
-        else:    
-            return SEEK_SUCCESS
+            return Seek_Result.SEEK_SUCCESS_FRAME_ERROR, seek_time_secs
+        else:
+            return Seek_Result.SEEK_SUCCESS, seek_time_secs
+        
+    def _get_fps_duration_metadata(self, videopath):
+        """Function to find the fps and duration of the input video file
+        Used by load function when also seeking"""
+        cmd = "ffprobe -v quiet -print_format json -show_streams"
+        args = shlex.split(cmd)
+        args.append(videopath)
+        # run the ffprobe process, decode stdout into utf-8 & convert to JSON
+        ffprobeOutput = subprocess.check_output(args).decode('utf-8')
+        ffprobeOutput = json.loads(ffprobeOutput)
+
+        # try get fps and duration
+        fps = 0
+        duration = 0
+        try:
+            aeval = Interpreter()
+            fps = aeval(ffprobeOutput['streams'][0]['avg_frame_rate'])
+            duration = float(ffprobeOutput['streams'][0]['duration'])
+        except Exception as ex:
+            print('Error getting metadata: ' + str(ex))
+
+        return fps, duration
+    
         
 
         
