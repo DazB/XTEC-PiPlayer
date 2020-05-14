@@ -33,8 +33,8 @@ class Player:
         """Create an instance of the main video player application class"""
         print("Player: Creating instance")
         # Init mpv player with config file
-        self.mpv_player = mpv.MPV(config=True, config_dir='./', log_handler=print) #
-        self.mpv_player.set_loglevel('debug')
+        self.mpv_player = mpv.MPV(config=True, config_dir='./') # , log_handler=print
+        # self.mpv_player.set_loglevel('debug')
 
         # Assign property observers that call functions when a property changes
         self.mpv_player.observe_property('idle-active', self.idle_observer)
@@ -50,7 +50,6 @@ class Player:
         Loads video number sent to it. Can also be combined with seek command to seek 
         to specific position in loaded video."""
         print('Player: Load command')
-
         load_return_code, seek_return_code = self._load_video(msg_data)
 
         if load_return_code == Load_Result.LOAD_SUCCESS:
@@ -82,10 +81,19 @@ class Player:
     def play_command(self, msg_data):
         """Play command sent to player. 
         Sets loop to false, and plays video if not already playing
-        Ignores message data"""
+        Will try load video if video number included"""
         print('Player: Play command')
-        if self.mpv_player.idle_active == True:
+        # Check if file number has been included
+        if msg_data != '':
+            load_return_code, _ = self._load_video(msg_data)
+            if load_return_code == Load_Result.LOAD_NO_FILE:
+                return 'Play failure: Could not find file'
+            elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
+                return 'Play failure: Incorrect file number sent'
+        # No file number included. Check there is a file already loaded
+        elif self.mpv_player.idle_active == True:
             return 'Play failure: no file loaded'
+
         self.mpv_player['loop-file'] = 'no'
         self.mpv_player['pause'] = False     
         return 'Play success'     
@@ -97,14 +105,13 @@ class Player:
         print('Player: Pause command')
         if self.mpv_player.idle_active == True:
             return 'Pause failure: no file loaded'
-    
         self.mpv_player['pause'] = True
         return 'Pause success' 
 
     def loop_command(self, msg_data):
         """Loop command sent to player.
         Sets loop to true, and plays video if not already playing.
-        Ignores message data"""
+        Will try load video if video number included"""
         print('Player: Loop command')
         # Check if file number has been included
         if msg_data != '':
