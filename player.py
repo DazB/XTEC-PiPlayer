@@ -8,6 +8,7 @@ import subprocess
 import shlex
 import json
 from asteval import Interpreter
+import time
 
 # Load return codes 
 class Load_Result(enum.Enum): 
@@ -32,40 +33,27 @@ class Player:
         """Create an instance of the main video player application class"""
         print("Player: Creating instance")
         # Init mpv player with config file
-        self.mpv_player = mpv.MPV(config=True, config_dir='./') #, log_handler=print
-        # self.mpv_player.set_loglevel('debug')
+        self.mpv_player = mpv.MPV(config=True, config_dir='./', log_handler=print) #
+        self.mpv_player.set_loglevel('debug')
 
         # Assign property observers that call functions when a property changes
         self.mpv_player.observe_property('idle-active', self.idle_observer)
 
+        # Main folder where all videos are kept
         self.video_folder = 'testfiles/' # TODO: this will obvs change
-    
+
     ################################################################################
     # Player command functions
     ################################################################################
     def load_command(self, msg_data):
         """Load command sent to player.
         Loads video number sent to it. Can also be combined with seek command to seek 
-        loaded video."""
-        print('Player: Load command')
-        # seek_return_code = None
-        # load_return_code = None
-        # Check if there is also a seek command in the load
-        # if re.search(r'SE.*', msg_data):
-        #     # There is a seek command
-
-        #     # OKAY so best way i can think of solving this is using ffprobe library, and embedding the seek
-        #     # shit in the load (maybe a seperate load function with seek) and do it like that. 
-
-        #     seek_time = re.findall(r'SE.*', msg_data)[0][2:]
-        #     (seek_return_code, seek_time_secs) = self._get_seek_time(seek_time)
-        #     load_command = re.sub(r'SE.*', ' ', msg_data)
-        #     load_return_code = self._load_video(load_command, start_time_secs=seek_time_secs) 
-        # else:
-        
+        to specific position in loaded video."""
+        print('Player: Load command')       
         load_return_code, seek_return_code = self._load_video(msg_data)
 
         if load_return_code == Load_Result.LOAD_SUCCESS:
+            # Was there also a seek when loading?
             if seek_return_code != None:
                 if seek_return_code == Seek_Result.SEEK_SUCCESS:
                     return 'Load and seek success'
@@ -97,7 +85,6 @@ class Player:
         print('Player: Play command')
         if self.mpv_player.idle_active == True:
             return 'Play failure: no file loaded'
-    
         self.mpv_player['loop-file'] = 'no'
         self.mpv_player['pause'] = False     
         return 'Play success'     
@@ -120,7 +107,7 @@ class Player:
         print('Player: Loop command')
         if self.mpv_player.idle_active == True:
             return 'Loop failure: no file loaded'
-        
+        # self.mpv_player.command('vf', 'set', 'loop=loop=-1:size=' + str(self.mpv_player.estimated_frame_count))
         self.mpv_player['loop-file'] = 'inf'
         self.mpv_player['pause'] = False
         return 'Loop success' 
@@ -164,6 +151,26 @@ class Player:
             return 'Seek failure: sent time is more than video duration'
         elif seek_result_code == Seek_Result.SEEK_SUCCESS_FRAME_ERROR:
             return 'Seek success with frame seek error. Ignored ff for seek'
+
+    def video_mute_command(self, msg_data):
+        """Video mute command sent to player.
+        Mutes """
+        print('Player: Video Mute command')
+        mute_option = 0
+        try:
+            mute_option = int(msg_data)
+        except Exception as ex:
+            return 'Video Mute error: incorrect option sent: ' + str(ex)
+        
+        if mute_option == 0:
+            self.mpv_player.command('vf', 'set', '')
+            return 'Video Mute success: video unmuted'
+        elif mute_option == 1:
+            self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=1920:h=1080:color=black:t=fill') # TODO: using 1920x1080. Correct?
+            # self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=' + str(self.mpv_player.dwidth) + ':h=' + str(self.mpv_player.dheight) + ':color=black:t=fill')
+            return 'Video Mute success: video muted'
+        else:
+            return 'Video Mute error: specify 0 for unmute and 1 for mute'
         
     ################################################################################
     # Property Observer functions
@@ -239,7 +246,6 @@ class Player:
                     
                     return Load_Result.LOAD_SUCCESS, seek_result
 
-
         return Load_Result.LOAD_NO_FILE, None
 
     def _get_seek_time(self, seek_time, video_frames, video_duration):
@@ -293,8 +299,7 @@ class Player:
             return Seek_Result.SEEK_SUCCESS, seek_time_secs
         
     def _get_fps_duration_metadata(self, videopath):
-        """Function to find the fps and duration of the input video file
-        Used by load function when also seeking"""
+        """Function to find the fps and duration of the input video file"""
         cmd = "ffprobe -v quiet -print_format json -show_streams"
         args = shlex.split(cmd)
         args.append(videopath)
@@ -306,9 +311,9 @@ class Player:
         fps = 0
         duration = 0
         try:
+            duration = float(ffprobeOutput['streams'][0]['duration'])
             aeval = Interpreter()
             fps = aeval(ffprobeOutput['streams'][0]['avg_frame_rate'])
-            duration = float(ffprobeOutput['streams'][0]['duration'])
         except Exception as ex:
             print('Error getting metadata: ' + str(ex))
 
