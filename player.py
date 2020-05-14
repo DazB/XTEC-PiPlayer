@@ -49,7 +49,8 @@ class Player:
         """Load command sent to player.
         Loads video number sent to it. Can also be combined with seek command to seek 
         to specific position in loaded video."""
-        print('Player: Load command')       
+        print('Player: Load command')
+
         load_return_code, seek_return_code = self._load_video(msg_data)
 
         if load_return_code == Load_Result.LOAD_SUCCESS:
@@ -105,8 +106,17 @@ class Player:
         Sets loop to true, and plays video if not already playing.
         Ignores message data"""
         print('Player: Loop command')
-        if self.mpv_player.idle_active == True:
+        # Check if file number has been included
+        if msg_data != '':
+            load_return_code, _ = self._load_video(msg_data)
+            if load_return_code == Load_Result.LOAD_NO_FILE:
+                return 'Loop failure: Could not find file'
+            elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
+                return 'Loop failure: Incorrect file number sent'
+        # No file number included. Check there is a file already loaded
+        elif self.mpv_player.idle_active == True:
             return 'Loop failure: no file loaded'
+
         # self.mpv_player.command('vf', 'set', 'loop=loop=-1:size=' + str(self.mpv_player.estimated_frame_count))
         self.mpv_player['loop-file'] = 'inf'
         self.mpv_player['pause'] = False
@@ -130,8 +140,6 @@ class Player:
         print('Player: Seek command')
         if self.mpv_player.idle_active == True:
             return 'Seek failure: no file loaded'
-        
-        msg_data = msg_data.lstrip() # Remove leading whitespace
         # Get seek time in seconds and result code
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, self.mpv_player.container_fps, self.mpv_player.duration)
         # Check result of getting the seek time
@@ -159,8 +167,8 @@ class Player:
         mute_option = 0
         try:
             mute_option = int(msg_data)
-        except Exception as ex:
-            return 'Video Mute error: incorrect option sent: ' + str(ex)
+        except Exception:
+            return 'Video Mute error: incorrect or no option sent'
         
         if mute_option == 0:
             self.mpv_player.command('vf', 'set', '')
@@ -191,11 +199,7 @@ class Player:
         self.mpv_player.quit()
 
     def _load_video(self, msg_data):
-        """Loads video. Will also perform seek if there is a seek command included"""
-        # Remove whitespace
-        msg_data = msg_data.lstrip()
-        msg_data = msg_data.strip()
-        
+        """Loads video. Will also perform seek if there is a seek command included"""       
         # Check if there is also a seek command with the load
         seek = False
         if re.search(r'SE.*', msg_data):
@@ -251,9 +255,6 @@ class Player:
     def _get_seek_time(self, seek_time, video_frames, video_duration):
         """Gets seek time passed in seconds. Returns result. Done this way because in the case of LD, 
         we may want to do a seek for a video that isn't this one"""
-        # Remove whitespace
-        seek_time = seek_time.lstrip()
-        seek_time = seek_time.strip()
         # Check time stamp is correct format
         if not re.match(r'^\d\d:\d\d:\d\d:\d\d$', seek_time):
             return Seek_Result.SEEK_BAD_FORM, 0
@@ -306,7 +307,6 @@ class Player:
         # run the ffprobe process, decode stdout into utf-8 & convert to JSON
         ffprobeOutput = subprocess.check_output(args).decode('utf-8')
         ffprobeOutput = json.loads(ffprobeOutput)
-
         # try get fps and duration
         fps = 0
         duration = 0

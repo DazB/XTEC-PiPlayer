@@ -13,13 +13,13 @@ class PlayerTCPServer():
 
         # Dictionary of commands. Each one calls a different function in player
         self.command_dict = {
-            b'LD': self.player.load_command,
-            b'PL': self.player.play_command,
-            b'LP': self.player.loop_command,
-            b'PA': self.player.pause_command,
-            b'ST': self.player.stop_command,
-            b'SE': self.player.seek_command,
-            b'VM': self.player.video_mute_command
+            'LD': self.player.load_command,
+            'PL': self.player.play_command,
+            'LP': self.player.loop_command,
+            'PA': self.player.pause_command,
+            'ST': self.player.stop_command,
+            'SE': self.player.seek_command,
+            'VM': self.player.video_mute_command
         }
 
         # Try to create the server
@@ -66,11 +66,13 @@ class PlayerTCPServer():
 
                 # Get first 2 letters, then search dictionary to call corresponding command
                 # Calls bad_command by default (essentially a switch, but python don't do switch)
-                command = self.data[0:2]    
+                command = self.data[0:2].decode().upper()
                 command_func = self.command_dict.get(command, self.bad_command)
                 try:
                     # Pass rest of the data packet to the function (could be nothing), and execute player command
                     msg_data = self.data[2:].decode()
+                    msg_data = msg_data.lstrip()
+                    msg_data = msg_data.strip()
                     response = command_func(msg_data)
                     # Respond with whatever player command returned
                     self.wfile.write(response.encode())
