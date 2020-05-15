@@ -33,8 +33,8 @@ class Player:
         """Create an instance of the main video player application class"""
         print("Player: Creating instance")
         # Init mpv player with config file
-        self.mpv_player = mpv.MPV(config=True, config_dir='./') # , log_handler=print
-        # self.mpv_player.set_loglevel('debug')
+        self.mpv_player = mpv.MPV(config=True, config_dir='./', log_handler=print) # , log_handler=print
+        self.mpv_player.set_loglevel('debug')
 
         # Assign property observers that call functions when a property changes
         self.mpv_player.observe_property('idle-active', self.idle_observer)
@@ -169,23 +169,44 @@ class Player:
 
     def video_mute_command(self, msg_data):
         """Video mute command sent to player.
-        Mutes """
+        Will mute or unmute video depending on sent command"""
         print('Player: Video Mute command')
         mute_option = 0
         try:
             mute_option = int(msg_data)
         except Exception:
             return 'Video Mute error: incorrect or no option sent'
-        
+        # If we're unmuting
         if mute_option == 0:
             self.mpv_player.command('vf', 'set', '')
             return 'Video Mute success: video unmuted'
+        # If we're muting
         elif mute_option == 1:
             self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=1920:h=1080:color=black:t=fill') # TODO: using 1920x1080. Correct?
             # self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=' + str(self.mpv_player.dwidth) + ':h=' + str(self.mpv_player.dheight) + ':color=black:t=fill')
             return 'Video Mute success: video muted'
         else:
             return 'Video Mute error: specify 0 for unmute and 1 for mute'
+
+    def audio_mute_command(self, msg_data):
+        """Audio mute command sent to player.
+        Will mute or unmute audio depending on sent command"""
+        print('Player: Audio Mute command')
+        mute_option = 0
+        try:
+            mute_option = int(msg_data)
+        except Exception:
+            return 'Audio Mute error: incorrect or no option sent'
+        # If we're unmuting
+        if mute_option == 0:
+            self.mpv_player.ao_mute = False
+            return 'Audio Mute success: video unmuted'
+        # If we're muting
+        elif mute_option == 1:
+            self.mpv_player.ao_mute = True
+            return 'Audio Mute success: video muted'
+        else:
+            return 'Audio Mute error: specify 0 for unmute and 1 for mute'
         
     ################################################################################
     # Property Observer functions

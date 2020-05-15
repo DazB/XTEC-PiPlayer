@@ -19,7 +19,8 @@ class PlayerTCPServer():
             'PA': self.player.pause_command,
             'ST': self.player.stop_command,
             'SE': self.player.seek_command,
-            'VM': self.player.video_mute_command
+            'VM': self.player.video_mute_command,
+            'AM': self.player.audio_mute_command
         }
 
         # Try to create the server
