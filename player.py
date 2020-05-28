@@ -1,5 +1,6 @@
-import mpv
 from tcp_server import PlayerTCPServer
+from omxplayer.player import OMXPlayer
+
 from pathlib import Path
 import glob
 import re
@@ -9,22 +10,30 @@ import shlex
 import json
 from asteval import Interpreter
 import time
+import numpy as np
 
-# Load return codes 
-class Load_Result(enum.Enum): 
-    LOAD_SUCCESS = 1
-    LOAD_BAD_COMMAND = 2
-    LOAD_NO_FILE = 3
+# Constants
+# Video player layers
+LAYER_LOADING   = 1
+LAYER_BLACK     = 2
+LAYER_PLAYING   = 3
 
-# Seek return codes 
+class Load_Result(enum.Enum):
+    """Load return codes """
+    SUCCESS                = 1
+    BAD_COMMAND            = 2
+    NO_FILE                = 3
+    FILE_ALREADY_PLAYING   = 4
+
 class Seek_Result(enum.Enum): 
-    SEEK_SUCCESS                = 1
-    SEEK_BAD_FORM               = 2
-    SEEK_BAD_MM                 = 3
-    SEEK_BAD_SS                 = 4
-    SEEK_BAD_FF                 = 5
-    SEEK_TOO_LONG               = 6
-    SEEK_SUCCESS_FRAME_ERROR    = 7
+    """Seek return codes """
+    SUCCESS                = 1
+    BAD_FORM               = 2
+    BAD_MM                 = 3
+    BAD_SS                 = 4
+    BAD_FF                 = 5
+    TOO_LONG               = 6
+    SUCCESS_FRAME_ERROR    = 7
 
 class Player:
     """Main video player class"""
@@ -32,12 +41,34 @@ class Player:
     def __init__(self):
         """Create an instance of the main video player application class"""
         print("Player: Creating instance")
-        # Init mpv player with config file
-        self.mpv_player = mpv.MPV(config=True, config_dir='./', log_handler=print) # , log_handler=print
-        self.mpv_player.set_loglevel('debug')
+        # First, we create a player that plays a black screen and stops. This is a little bit of a hacky way to get
+        # a black background which we still have control over, but it works, and performance is good
+        self.black = OMXPlayer('black.mp4', dbus_name='org.mpris.MediaPlayer2.black', \
+            args=['--no-osd', '--no-keys', '-b', '--end-paused', '--layer='+str(LAYER_BLACK)])
 
-        # Assign property observers that call functions when a property changes
-        self.mpv_player.observe_property('idle-active', self.idle_observer)
+        # Set OMX players (None until a video is loaded)
+        self.omxplayer_playing = None
+        self.omxplayer_loaded = None
+        self.omxplayer_loop = None
+
+        # Variables tracking state of player
+        self.is_looping = False
+
+        # Variables tracking videos playing and loaded 
+        self.playing_video_number = None
+        self.loaded_video_number = None
+        self.playing_video_path = None
+        self.loaded_video_path = None
+
+        # # Blacks out the screen
+        # # Map the screen as Numpy array
+        # # N.B. Numpy stores in format HEIGHT then WIDTH, not WIDTH then HEIGHT!
+        # # c is the number of channels, 4 because BGRA
+        # h, w, c = 1080, 1920, 4
+        # fb = np.memmap('/dev/fb0', dtype='uint8',mode='w+', shape=(h,w,c)) 
+
+        # # Fill entire screen with black
+        # fb[:] = [0,0,0,0]
 
         # Main folder where all videos are kept
         self.video_folder = 'testfiles/' # TODO: this will obvs change
@@ -52,30 +83,32 @@ class Player:
         print('Player: Load command')
         load_return_code, seek_return_code = self._load_video(msg_data)
 
-        if load_return_code == Load_Result.LOAD_SUCCESS:
+        if load_return_code == Load_Result.SUCCESS:
             # Was there also a seek when loading?
             if seek_return_code != None:
-                if seek_return_code == Seek_Result.SEEK_SUCCESS:
+                if seek_return_code == Seek_Result.SUCCESS:
                     return 'Load and seek success'
-                elif seek_return_code == Seek_Result.SEEK_SUCCESS_FRAME_ERROR:
+                elif seek_return_code == Seek_Result.SUCCESS_FRAME_ERROR:
                     return 'Load success. Seek success with frame seek error. Ignored ff for seek'
-                elif seek_return_code == Seek_Result.SEEK_BAD_FORM:
-                    return 'File not loaded. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
-                elif seek_return_code == Seek_Result.SEEK_BAD_MM:
-                    return 'File not loaded. Seek failure: mm must be between 00 and 59'
-                elif seek_return_code == Seek_Result.SEEK_BAD_SS:
-                    return 'File not loaded. Seek failure: ss must be between 00 and 59'
-                elif seek_return_code == Seek_Result.SEEK_BAD_FF:
-                    return 'File not loaded. Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
-                elif seek_return_code == Seek_Result.SEEK_TOO_LONG:
-                    return 'File not loaded. Seek failure: sent time is more than video duration'
+                elif seek_return_code == Seek_Result.BAD_FORM:
+                    return 'Load success. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+                elif seek_return_code == Seek_Result.BAD_MM:
+                    return 'Load success. Seek failure: mm must be between 00 and 59'
+                elif seek_return_code == Seek_Result.BAD_SS:
+                    return 'Load success. Seek failure: ss must be between 00 and 59'
+                elif seek_return_code == Seek_Result.BAD_FF:
+                    fps, _ = self._get_fps_duration_metadata(self.loaded_video_path)
+                    return 'Load success. Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')'
+                elif seek_return_code == Seek_Result.TOO_LONG:
+                    return 'Load success. Seek failure: sent time is more than video duration'
             else:
                 return 'Load success'
-        elif load_return_code == Load_Result.LOAD_NO_FILE:
+        elif load_return_code == Load_Result.NO_FILE:
             return 'Load failure: Could not find file'
-        elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
+        elif load_return_code == Load_Result.BAD_COMMAND:
             return 'Load failure: Incorrect file number sent'
-
+        elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
+            return 'Load: File already playing'
         return 'Load failure: Unknown'
 
     def play_command(self, msg_data):
@@ -86,16 +119,34 @@ class Player:
         # Check if file number has been included
         if msg_data != '':
             load_return_code, _ = self._load_video(msg_data)
-            if load_return_code == Load_Result.LOAD_NO_FILE:
+            if load_return_code == Load_Result.NO_FILE:
                 return 'Play failure: Could not find file'
-            elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
+            elif load_return_code == Load_Result.BAD_COMMAND:
                 return 'Play failure: Incorrect file number sent'
+            elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
+                self.omxplayer_playing.play()
+                self.is_looping = False
+                return 'Play success'     
+
         # No file number included. Check there is a file already loaded
-        elif self.mpv_player.idle_active == True:
+        elif self.loaded_video_number == None:
             return 'Play failure: no file loaded'
 
-        self.mpv_player['loop-file'] = 'no'
-        self.mpv_player['pause'] = False     
+        # The video has been loaded. Switch the players and play
+        self.is_looping = False
+        
+        if self.omxplayer_playing != None:
+            self.omxplayer_playing.quit()
+
+        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
+        self.omxplayer_loaded.play()
+        self.omxplayer_playing = self.omxplayer_loaded
+        
+        self.playing_video_number = self.loaded_video_number
+        self.playing_video_path = self.loaded_video_path
+        self.loaded_video_number = None
+        self.loaded_video_path = None
+
         return 'Play success'     
 
     def pause_command(self, msg_data):
@@ -116,9 +167,9 @@ class Player:
         # Check if file number has been included
         if msg_data != '':
             load_return_code, _ = self._load_video(msg_data)
-            if load_return_code == Load_Result.LOAD_NO_FILE:
+            if load_return_code == Load_Result.NO_FILE:
                 return 'Loop failure: Could not find file'
-            elif load_return_code == Load_Result.LOAD_BAD_COMMAND:
+            elif load_return_code == Load_Result.BAD_COMMAND:
                 return 'Loop failure: Incorrect file number sent'
         # No file number included. Check there is a file already loaded
         elif self.mpv_player.idle_active == True:
@@ -150,21 +201,21 @@ class Player:
         # Get seek time in seconds and result code
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, self.mpv_player.container_fps, self.mpv_player.duration)
         # Check result of getting the seek time
-        if seek_result_code == Seek_Result.SEEK_SUCCESS:
+        if seek_result_code == Seek_Result.SUCCESS:
             # Sikh
             self.mpv_player.seek(seek_time_secs, reference='absolute', precision='exact')
             return 'Seek success'
-        elif seek_result_code == Seek_Result.SEEK_BAD_FORM:
+        elif seek_result_code == Seek_Result.BAD_FORM:
             return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
-        elif seek_result_code == Seek_Result.SEEK_BAD_MM:
+        elif seek_result_code == Seek_Result.BAD_MM:
             return 'Seek failure: mm must be between 00 and 59'
-        elif seek_result_code == Seek_Result.SEEK_BAD_SS:
+        elif seek_result_code == Seek_Result.BAD_SS:
             return 'Seek failure: ss must be between 00 and 59'
-        elif seek_result_code == Seek_Result.SEEK_BAD_FF:
+        elif seek_result_code == Seek_Result.BAD_FF:
             return 'Seek failure: ff must be between 00 and frame rate (' + str(self.mpv_player.container_fps) + ')'
-        elif seek_result_code == Seek_Result.SEEK_TOO_LONG:
+        elif seek_result_code == Seek_Result.TOO_LONG:
             return 'Seek failure: sent time is more than video duration'
-        elif seek_result_code == Seek_Result.SEEK_SUCCESS_FRAME_ERROR:
+        elif seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR:
             return 'Seek success with frame seek error. Ignored ff for seek'
 
     def video_mute_command(self, msg_data):
@@ -207,16 +258,7 @@ class Player:
             return 'Audio Mute success: video muted'
         else:
             return 'Audio Mute error: specify 0 for unmute and 1 for mute'
-        
-    ################################################################################
-    # Property Observer functions
-    ################################################################################
-    def idle_observer(self, _name, value):
-        """Once we've become idle, clear the playlist"""
-        if value == True:
-            self.mpv_player.command('playlist-clear')
-
-    
+           
     ################################################################################
     # Utility functions
     ################################################################################
@@ -224,14 +266,20 @@ class Player:
         """Shuts down player
         Ignores any other arguments"""
         print('Player: Shutdown')
-        self.mpv_player.quit()
+        if self.omxplayer_playing != None:
+            self.omxplayer_playing.quit()
+        if self.omxplayer_loaded != None:
+            self.omxplayer_loaded.quit()
+        if self.omxplayer_loop != None:
+            self.omxplayer_loop.quit()
+        self.black.quit()
 
     def _load_video(self, msg_data):
         """Loads video. Will also perform seek if there is a seek command included"""       
         # Check if there is also a seek command with the load
         seek = False
         if re.search(r'SE.*', msg_data):
-            load_command = re.sub(r'SE.*', ' ', msg_data)
+            load_command = re.sub(r'SE.*', '', msg_data)
             seek = True
         else:
             # No seek command
@@ -242,7 +290,14 @@ class Player:
             video_number = int(load_command)
         except Exception as ex:
             print("Player: Load exception. Can't convert into number: " + str(ex))
-            return Load_Result.LOAD_BAD_COMMAND, None
+            return Load_Result.BAD_COMMAND, None
+
+        if video_number == self.playing_video_number:
+            # Video already playing
+            return Load_Result.FILE_ALREADY_PLAYING, None
+        if video_number == self.loaded_video_number:
+            # Video already loaded
+            return Load_Result.SUCCESS, None
 
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)
@@ -252,40 +307,37 @@ class Player:
             file_number = int(re.findall(r'\d\d\d\d\d\.mp4', video_file.name)[0][0:5])
             # Check if we have a match
             if file_number == video_number:
-                # We have a match. Are we seeking?
-                if not seek:
-                    # Load video with no seek. Check if we currently idle. If so, replace the video
-                    if self.mpv_player.idle_active == True:
-                        self.mpv_player.loadfile(str(video_file.resolve()), mode='replace')
-                    else:
-                        self.mpv_player.loadfile(str(video_file.resolve()), mode='append')
-                    return Load_Result.LOAD_SUCCESS, None
-                else:
+                # We have a match
+                # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
+                self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), dbus_name='org.mpris.MediaPlayer2.omxplayer' \
+                    + str(video_number), args=['--no-osd', '--no-keys', '-b', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)])
+                # Keep track of loaded video
+                self.loaded_video_number = video_number 
+                self.loaded_video_path = str(video_file.resolve())
+
+                seek_result = None
+                if seek:
                     # We are loading this file with a seek.
                     # To do seek, we need to pass the video frames and duration. We use ffprobe to get
-                    # this info without loading the video
+                    # this info
                     fps, duration = self._get_fps_duration_metadata(str(video_file.resolve()))
-                    seek_timestamp = re.sub(r'.* SE', ' ', msg_data)
+                    seek_timestamp = re.sub(r'.* SE', '', msg_data)
                     seek_result, seek_time_secs = self._get_seek_time(seek_timestamp, fps, duration)
 
-                    if (seek_result == Seek_Result.SEEK_SUCCESS) or (seek_result == Seek_Result.SEEK_SUCCESS_FRAME_ERROR):
-                        # Check if we currently idle. If so, replace the video. 
-                        # We are using our seek time to say where to start video .
-                        if self.mpv_player.idle_active == True:
-                            self.mpv_player.loadfile(str(video_file.resolve()), mode='replace', start=str(seek_time_secs))
-                        else:
-                            self.mpv_player.loadfile(str(video_file.resolve()), mode='append', start=str(seek_time_secs))
-                    
-                    return Load_Result.LOAD_SUCCESS, seek_result
+                    if (seek_result == Seek_Result.SUCCESS) or (seek_result == Seek_Result.SUCCESS_FRAME_ERROR):
+                        # Seek to correct position in the video
+                        self.omxplayer_loaded.set_position(seek_time_secs)
+                        
+                return Load_Result.SUCCESS, seek_result
 
-        return Load_Result.LOAD_NO_FILE, None
+        return Load_Result.NO_FILE, None
 
     def _get_seek_time(self, seek_time, video_frames, video_duration):
         """Gets seek time passed in seconds. Returns result. Done this way because in the case of LD, 
         we may want to do a seek for a video that isn't this one"""
         # Check time stamp is correct format
         if not re.match(r'^\d\d:\d\d:\d\d:\d\d$', seek_time):
-            return Seek_Result.SEEK_BAD_FORM, 0
+            return Seek_Result.BAD_FORM, 0
         
         timestamp_parts = seek_time.split(':')
        
@@ -296,13 +348,13 @@ class Player:
         # Add minutes seek time
         seek_mins = int(timestamp_parts[1])
         if seek_mins > 59:
-             return Seek_Result.SEEK_BAD_MM, 0
+             return Seek_Result.BAD_MM, 0
         seek_time_secs = seek_time_secs + (seek_mins * 60)
         
         # Add seconds seek time
         seek_seconds = int(timestamp_parts[2])
         if seek_seconds > 59:
-             return Seek_Result.SEEK_BAD_SS, 0
+             return Seek_Result.BAD_SS, 0
         seek_time_secs = seek_time_secs + (seek_seconds)
         
         # Add frame seek time
@@ -314,18 +366,18 @@ class Player:
             frame_error = True        
         else:
             if seek_frames > video_frames:
-                return Seek_Result.SEEK_BAD_FF, 0
+                return Seek_Result.BAD_FF, 0
             else:
                 seek_time_secs = seek_time_secs + ((1 / video_frames) * seek_frames)
         
         # Check if seek time is actually within the video duration 
         if seek_time_secs > video_duration:
-            return Seek_Result.SEEK_TOO_LONG, 0
+            return Seek_Result.TOO_LONG, 0
        
         if frame_error:
-            return Seek_Result.SEEK_SUCCESS_FRAME_ERROR, seek_time_secs
+            return Seek_Result.SUCCESS_FRAME_ERROR, seek_time_secs
         else:
-            return Seek_Result.SEEK_SUCCESS, seek_time_secs
+            return Seek_Result.SUCCESS, seek_time_secs
         
     def _get_fps_duration_metadata(self, videopath):
         """Function to find the fps and duration of the input video file"""
