@@ -17,9 +17,10 @@ import threading
 # Constants
 # Video player layers
 LAYER_LOADING   = 1
-LAYER_BLACK     = 2
+LAYER_UNMUTE    = 2
 LAYER_LOOP      = 3
 LAYER_PLAYING   = 4
+LAYER_MUTE      = 5
 
 class Load_Result(enum.Enum):
     """Load return codes """
@@ -47,7 +48,7 @@ class Player:
         # First, we create a player that plays a black screen and stops. This is a little bit of a hacky way to get
         # a black background which we still have control over, but it works, and performance is good
         self.black = OMXPlayer('black.mp4', dbus_name='org.mpris.MediaPlayer2.black', \
-            args=['--no-osd', '--no-keys', '-b', '--end-paused', '--layer='+str(LAYER_BLACK)])
+            args=['--no-osd', '--no-keys', '-b', '--end-paused', '--layer='+str(LAYER_UNMUTE)])
 
         # Set OMX players (None until a video is loaded)
         self.omxplayer_playing = None
@@ -61,7 +62,7 @@ class Player:
         self.loaded_video_path = None
         self._is_looping = False
         self._loop_number = 0   # This toggles whenever a loop occurs, to ensure looping videos don't clash in dbus name
-        self.check_end_thread = None
+        self._check_end_thread = None
 
         # Main folder where all videos are kept
         self.video_folder = 'testfiles/' # TODO: this will obvs change
@@ -152,6 +153,8 @@ class Player:
         else:
             new_video_loaded = False
 
+        self._is_looping = False        # Controls loop
+
         if new_video_loaded:
             # New video has been loaded. Switch the players
             self.omxplayer_loaded.set_layer(LAYER_PLAYING)
@@ -169,7 +172,6 @@ class Player:
             self.loaded_video_path = None
 
         self.omxplayer_playing.play()
-        self._is_looping = False        # Controls loop
 
         return 'Play success'     
 
@@ -209,6 +211,11 @@ class Player:
             new_video_loaded = False
 
         if new_video_loaded:
+            # If we were looping the old video, kill the thread to check the end to die
+            if self._is_looping == True:
+                self._is_looping = False
+                self._check_end_thread.join()
+
             # New video has been loaded. Switch the players and play
             self.omxplayer_loaded.set_layer(LAYER_PLAYING)
 
@@ -239,9 +246,9 @@ class Player:
 
         # Start thread to check end of playing video
         self._is_looping = True
-        self.check_end_thread = threading.Thread(target=self._check_end)
-        self.check_end_thread.daemon = True
-        self.check_end_thread.start()
+        self._check_end_thread = threading.Thread(target=self._check_end)
+        self._check_end_thread.daemon = True
+        self._check_end_thread.start()
         
         return 'Loop success' 
 
@@ -337,8 +344,8 @@ class Player:
             self.omxplayer_loop.quit()
         # If there is a looping thread, kill it
         self._is_looping = False
-        if self.check_end_thread != None: 
-            self.check_end_thread.join() # wait for end of thread
+        if self._check_end_thread != None: 
+            self._check_end_thread.join() # wait for end of thread
         self.black.quit()
 
     def _load_video(self, command):
@@ -447,12 +454,13 @@ class Player:
         return fps, duration
 
     def _check_end(self): 
-        """Will constantly poll currently playing media to check if it's stopped, or if we're no longer checking for the end"""
-        # Wrap in try except as it is possible for omxplayer to close
+        """Will constantly poll currently playing media to check if it's stopped, or if we're no longer looping"""
+        # Wrap in try except as it is possible for omxplayer to be closed, and thus raise an exception
         try:
             while (self.omxplayer_playing.playback_status() != 'Done') and (self._is_looping):
                 time.sleep(0.01)
         except Exception as ex:
+            # Playing omxplayer has been closed. Looping has been cancelled
             print('Exception in check end thread. Most likely playing omxplayer has been closed: ' + str(ex))
             return
 
@@ -473,6 +481,6 @@ class Player:
         self._loop_number ^= 1 # Toggle loop number
 
         # Reset thread
-        self.check_end_thread = threading.Thread(target=self._check_end)
-        self.check_end_thread.daemon = True
-        self.check_end_thread.start()
+        self._check_end_thread = threading.Thread(target=self._check_end)
+        self._check_end_thread.daemon = True
+        self._check_end_thread.start()
