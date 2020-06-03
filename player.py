@@ -56,13 +56,14 @@ class Player:
         self.omxplayer_loop = None
 
         # Variables tracking videos playing and loaded 
-        self.playing_video_number = None
-        self.loaded_video_number = None
-        self.playing_video_path = None
-        self.loaded_video_path = None
-        self._is_looping = False
-        self._loop_number = 0   # This toggles whenever a loop occurs, to ensure looping videos don't clash in dbus name
-        self._check_end_thread = None
+        self.playing_video_number = None    # Playing video file number
+        self.loaded_video_number = None     # Loaded video file number
+        self.playing_video_path = None      # Playing video file path
+        self.loaded_video_path = None       # Loaded video file path
+        self._is_looping = False            # If we're looping the video
+        self._audio_muted = False           # If we've muted the video
+        self._loop_number = 0               # Increments whenever a loop occurs, to ensure looping videos don't clash in dbus name
+        self._check_end_thread = None       # Thread that is used for looping the video
 
         # Main folder where all videos are kept
         self.video_folder = 'testfiles/' # TODO: this will obvs change
@@ -162,12 +163,13 @@ class Player:
                 self.omxplayer_playing = None
 
             self.omxplayer_playing = self.omxplayer_loaded
-       
+            self.omxplayer_loaded = None
+
             self.playing_video_number = self.loaded_video_number
             self.playing_video_path = self.loaded_video_path
             self.loaded_video_number = None
             self.loaded_video_path = None
-
+            
         self._is_looping = False  # Controls loop
         if self.omxplayer_loop != None:
             self.omxplayer_loop.quit()
@@ -229,6 +231,7 @@ class Player:
                 self.omxplayer_loop = None
             
             self.omxplayer_playing = self.omxplayer_loaded
+            self.omxplayer_loaded = None
 
             self.playing_video_number = self.loaded_video_number
             self.playing_video_path = self.loaded_video_path
@@ -243,8 +246,11 @@ class Player:
             return 'Loop success' 
 
         # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
-        self.omxplayer_loop = OMXPlayer(self.playing_video_path, dbus_name='org.mpris.MediaPlayer2.omxplayerfirstloop' \
+        self.omxplayer_loop = OMXPlayer(self.playing_video_path, dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self._loop_number) \
             + str(self.playing_video_number), args=['--no-osd', '--no-keys', '-b', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
+        self._loop_number += 1 # Increment loop number
+        if self._audio_muted:
+            self.omxplayer_loop.mute()
 
         # Start thread to check end of playing video
         self._is_looping = True
@@ -302,12 +308,11 @@ class Player:
             return 'Video Mute error: incorrect or no option sent'
         # If we're unmuting
         if mute_option == 0:
-            self.mpv_player.command('vf', 'set', '')
+            self.black.set_layer(LAYER_UNMUTE)
             return 'Video Mute success: video unmuted'
         # If we're muting
         elif mute_option == 1:
-            self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=1920:h=1080:color=black:t=fill') # TODO: using 1920x1080. Correct?
-            # self.mpv_player.command('vf', 'set', 'drawbox=x=0:y=0:w=' + str(self.mpv_player.dwidth) + ':h=' + str(self.mpv_player.dheight) + ':color=black:t=fill')
+            self.black.set_layer(LAYER_MUTE)
             return 'Video Mute success: video muted'
         else:
             return 'Video Mute error: specify 0 for unmute and 1 for mute'
@@ -323,11 +328,21 @@ class Player:
             return 'Audio Mute error: incorrect or no option sent'
         # If we're unmuting
         if mute_option == 0:
-            self.mpv_player.ao_mute = False
+            if self.omxplayer_playing != None:
+                self.omxplayer_playing.unmute()
+            if self.omxplayer_loaded != None:
+                self.omxplayer_loaded.unmute()
+            if self.omxplayer_loop != None:
+                self.omxplayer_loop.unmute()
             return 'Audio Mute success: video unmuted'
         # If we're muting
         elif mute_option == 1:
-            self.mpv_player.ao_mute = True
+            if self.omxplayer_playing != None:
+                self.omxplayer_playing.mute()
+            if self.omxplayer_loaded != None:
+                self.omxplayer_loaded.mute()
+            if self.omxplayer_loop != None:
+                self.omxplayer_loop.mute()
             return 'Audio Mute success: video muted'
         else:
             return 'Audio Mute error: specify 0 for unmute and 1 for mute'
@@ -378,6 +393,9 @@ class Player:
                 # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
                 self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), dbus_name='org.mpris.MediaPlayer2.omxplayer' \
                     + str(video_number), args=['--no-osd', '--no-keys', '-b', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)])
+                if self._audio_muted:
+                    self.omxplayer_loaded.mute()
+
                 # Keep track of loaded video
                 self.loaded_video_number = video_number 
                 self.loaded_video_path = str(video_file.resolve())
@@ -482,7 +500,9 @@ class Player:
         # Reload same video on the "loop layer".
         self.omxplayer_loop = OMXPlayer(self.playing_video_path, dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self._loop_number) \
             + str(self.playing_video_number), args=['--no-osd', '--no-keys', '-b', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
-        self._loop_number ^= 1 # Toggle loop number
+        self._loop_number += 1 # Increment loop number
+        if self._audio_muted:
+            self.omxplayer_loop.mute()
 
         # Reset thread
         self._check_end_thread = threading.Thread(target=self._check_end)
