@@ -52,12 +52,12 @@ class App:
 if __name__ == '__main__':
     print('And here we go....')
 
-    LOG_FILENAME = 'debug.log'
-    logging.basicConfig(
-        filename=LOG_FILENAME,
-        format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-        datefmt='%H:%M:%S',
-        level=logging.DEBUG)
+    # LOG_FILENAME = 'debug.log'
+    # logging.basicConfig(
+    #     filename=LOG_FILENAME,
+    #     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    #     datefmt='%H:%M:%S',
+    #     level=logging.DEBUG)
 
     # Main app instance
     app = App()
