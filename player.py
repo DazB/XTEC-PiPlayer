@@ -47,7 +47,7 @@ class Player:
         print("Player: Creating instance")
         # First, we create a player that plays a black screen and stops. This is a little bit of a hacky way to get
         # a black background which we still have control over, but it works, and performance is good
-        self.black = OMXPlayer('black.mp4', dbus_name='org.mpris.MediaPlayer2.black', \
+        self.black = OMXPlayer('black.mp4', dbus_name='org.mpris.MediaPlayer2.omxplayerblack', \
             args=['--no-osd', '--no-keys', '-b', '--end-paused', '--layer='+str(LAYER_UNMUTE)])
 
         # Set OMX players (None until a video is loaded)
@@ -344,10 +344,12 @@ class Player:
                 self.omxplayer_loaded.unmute()
                 self.omxplayer_loaded.step()
                 self.omxplayer_loaded.set_position(0)
+                self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
                 self.omxplayer_loop.unmute()
                 self.omxplayer_loop.step()
                 self.omxplayer_loop.set_position(0)
+                self.omxplayer_loop.step()
             return 'Audio Mute success: video unmuted'
         # If we're muting
         elif mute_option == 1:
@@ -358,10 +360,13 @@ class Player:
                 self.omxplayer_loaded.mute()
                 self.omxplayer_loaded.step()
                 self.omxplayer_loaded.set_position(0)
+                self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
                 self.omxplayer_loop.mute()
                 self.omxplayer_loop.step()
                 self.omxplayer_loop.set_position(0)
+                self.omxplayer_loop.step()
+
             return 'Audio Mute success: video muted'
         else:
             return 'Audio Mute error: specify 0 for unmute and 1 for mute'
@@ -508,7 +513,6 @@ class Player:
 
         # Video has ended, we are now looping. Play same video and move to playing layer
         self.omxplayer_loop.set_layer(LAYER_PLAYING)
-        self.omxplayer_playing.mute()
         self.omxplayer_loop.play()
         self.omxplayer_playing.quit()
         self.omxplayer_playing = None
