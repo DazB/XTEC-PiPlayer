@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+from werkzeug.serving import run_simple
 
 app = Flask(__name__)
 
@@ -39,6 +40,7 @@ def save_error():
 def submit_ok():
     return render_template('submit_ok.html')
 
+def run_web_server(host):
+    """Runs the webserver"""
+    app.run(host=host, port=8080)
     
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')

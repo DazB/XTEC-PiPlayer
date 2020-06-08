@@ -12,6 +12,7 @@ import configparser
 import re
 import os
 
+from web_server.server import run_web_server
 from tcp_server import PlayerTCPServer
 from player import Player
 
@@ -25,6 +26,8 @@ class App:
         ip = '0.0.0.0'
         port = '9999'
         subnet = '255.255.255.0'
+        audio = 'both'
+
         try:
             config = configparser.ConfigParser()
             config.read('config.ini')
@@ -47,10 +50,15 @@ class App:
                 r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
                 r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['subnet']):
                     subnet = mp2_config['subnet']
+            # Audio 
+            if mp2_config['audio'] != None:
+                if re.search(r'^audio$|^local$|^both$', mp2_config['audio']):
+                    audio = mp2_config['audio']
 
         except Exception as ex:
             print("Main: Config read exception: " + str(ex))
         
+        # Apply changes to the eth0 network interface
         os.system('sudo ifconfig eth0 down')
         os.system('sudo ifconfig eth0 ' + ip + ' netmask ' + subnet)
         os.system('sudo ifconfig eth0 up')
@@ -70,8 +78,11 @@ class App:
                 print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
                 time.sleep(PLAYER_RETRY_DELAY)
 
-        # Create the server
+        # Create the tcp server
         self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
+        
+        # Run the webserver
+        run_web_server(ip)
 
     def run(self):
         """Main app loop"""
