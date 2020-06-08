@@ -10,6 +10,7 @@ import time
 import logging
 import configparser
 import re
+import os
 
 from tcp_server import PlayerTCPServer
 from player import Player
@@ -23,6 +24,7 @@ class App:
         # Get config settings. Will use default values if settings not present or incorrect
         ip = '0.0.0.0'
         port = '9999'
+        subnet = '255.255.255.0'
         try:
             config = configparser.ConfigParser()
             config.read('config.ini')
@@ -38,9 +40,21 @@ class App:
             if mp2_config['port'] != None:
                 if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', mp2_config['port']):
                     port = mp2_config['port']
+            # Subnet mask 
+            if mp2_config['subnet'] != None:
+                if re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['subnet']):
+                    subnet = mp2_config['subnet']
+
         except Exception as ex:
             print("Main: Config read exception: " + str(ex))
         
+        os.system('sudo ifconfig eth0 down')
+        os.system('sudo ifconfig eth0 ' + ip + ' netmask ' + subnet)
+        os.system('sudo ifconfig eth0 up')
+
         # Try to create the player
         self.player = None
         player_retry = 0
