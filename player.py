@@ -223,12 +223,17 @@ class Player:
                     self.omxplayer_playing.set_position(0)
                     self.omxplayer_playing.step()
 
-        # No file number included. Check there is a file already loaded
-        elif self.loaded_video_number == None:
-            return 'Loop failure: no file loaded'
-        # Plain LP command. Loop the current video
-        else:
+        # No file number included. Check there is a file already playing
+        elif self.playing_video_number != None:
             new_video_loaded = False
+
+        # Check there is a file already loaded
+        elif self.loaded_video_number != None:
+            new_video_loaded = True
+
+        # No file playing or loaded
+        else:
+            return 'Loop failure: no file playing or loaded'
 
         if new_video_loaded:
             # If we were looping the old video, kill the thread to check the end to die
