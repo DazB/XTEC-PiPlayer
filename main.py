@@ -8,6 +8,8 @@ import sys
 import signal
 import time
 import logging
+import configparser
+import re
 
 from tcp_server import PlayerTCPServer
 from player import Player
@@ -16,7 +18,29 @@ class App:
     """Main Application class"""
 
     def __init__(self):
-        """Creates all the needed application objects"""
+        """Creates all the application objects"""
+
+        # Get config settings. Will use default values if settings not present or incorrect
+        ip = '0.0.0.0'
+        port = '9999'
+        try:
+            config = configparser.ConfigParser()
+            config.read('config.ini')
+            mp2_config = config['MP2']
+            # IP address
+            if mp2_config['ip'] != None:
+                if re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['ip']):
+                    ip = mp2_config['ip']
+            # Port number 
+            if mp2_config['port'] != None:
+                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', mp2_config['port']):
+                    port = mp2_config['port']
+        except Exception as ex:
+            print("Main: Config read exception: " + str(ex))
+        
         # Try to create the player
         self.player = None
         player_retry = 0
@@ -33,7 +57,7 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create the server
-        self.player_tcp_server = PlayerTCPServer(self.player)
+        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
 
     def run(self):
         """Main app loop"""

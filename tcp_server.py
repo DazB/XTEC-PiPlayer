@@ -7,7 +7,7 @@ import threading
 class PlayerTCPServer():
     """TCP Server that handles connections to control the passed in player"""
 
-    def __init__(self, player):
+    def __init__(self, player, ip, port):
         """Initalise TCP server and handler"""
         self.player = player
 
@@ -28,7 +28,7 @@ class PlayerTCPServer():
         tcp_retry = 0
         while self.server is None:
             try:
-                self.server = self.ThreadedTCPServer(('localhost', 9999), self.dynamic_handler(self.command_dict))  
+                self.server = self.ThreadedTCPServer((ip, int(port)), self.dynamic_handler(self.command_dict))  
             except Exception as ex:
                 if tcp_retry == 5:
                     sys.exit('TCP Server: Cannot create TCP Server: %s' % ex)
