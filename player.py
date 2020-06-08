@@ -102,9 +102,13 @@ class Player:
                     # Seek to correct position in the video (Have to a little intermediate seek because of bug in OMX)
                     # where setting position to somewhere too early causes it to break. 
                     self.omxplayer_loaded.step()
+                    time.sleep(0.1)
                     self.omxplayer_loaded.set_position(1)
+                    time.sleep(0.1)
                     self.omxplayer_loaded.step()
+                    time.sleep(0.1)
                     self.omxplayer_loaded.set_position(seek_time_secs)
+                    time.sleep(0.1)
                     self.omxplayer_loaded.step()
 
                 if seek_result == Seek_Result.SUCCESS:
@@ -152,6 +156,7 @@ class Player:
                 if self.omxplayer_playing.playback_status() == 'Done':
                     self.omxplayer_playing.pause()
                     self.omxplayer_playing.set_position(0)
+                    time.sleep(0.1)
                     self.omxplayer_playing.step()
 
         # No file number included. Check there is a file already playing
@@ -221,6 +226,7 @@ class Player:
                 if self.omxplayer_playing.playback_status() == 'Done':
                     self.omxplayer_playing.pause()
                     self.omxplayer_playing.set_position(0)
+                    time.sleep(0.1)
                     self.omxplayer_playing.step()
 
         # No file number included. Check there is a file already playing
@@ -303,6 +309,7 @@ class Player:
         if seek_result_code == Seek_Result.SUCCESS:
             # Sikh
             self.omxplayer_playing.set_position(seek_time_secs)
+            time.sleep(0.1)
             self.omxplayer_playing.step()
             return 'Seek success'
         elif seek_result_code == Seek_Result.BAD_FORM:
@@ -357,12 +364,16 @@ class Player:
                 # the mute and unmute. Otherwise can hear very briefly once video starts
                 self.omxplayer_loaded.unmute()
                 self.omxplayer_loaded.step()
+                time.sleep(0.1)
                 self.omxplayer_loaded.set_position(0)
+                time.sleep(0.1)
                 self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
                 self.omxplayer_loop.unmute()
                 self.omxplayer_loop.step()
+                time.sleep(0.1)
                 self.omxplayer_loop.set_position(0)
+                time.sleep(0.1)
                 self.omxplayer_loop.step()
             return 'Audio Mute success: video unmuted'
         # If we're muting
@@ -373,12 +384,16 @@ class Player:
             if self.omxplayer_loaded != None:
                 self.omxplayer_loaded.mute()
                 self.omxplayer_loaded.step()
+                time.sleep(0.1)
                 self.omxplayer_loaded.set_position(0)
+                time.sleep(0.1)
                 self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
                 self.omxplayer_loop.mute()
                 self.omxplayer_loop.step()
+                time.sleep(0.1)
                 self.omxplayer_loop.set_position(0)
+                time.sleep(0.1)
                 self.omxplayer_loop.step()
 
             return 'Audio Mute success: video muted'
