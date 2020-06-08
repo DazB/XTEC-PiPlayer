@@ -99,9 +99,13 @@ class Player:
                 seek_result, seek_time_secs = self._get_seek_time(seek_timestamp, fps, duration)
 
                 if (seek_result == Seek_Result.SUCCESS) or (seek_result == Seek_Result.SUCCESS_FRAME_ERROR):
-                    # Seek to correct position in the video
+                    # Seek to correct position in the video (Have to a little intermediate seek because of bug in OMX)
+                    # where setting position to somewhere too early causes it to break. 
+                    self.omxplayer_loaded.step()
+                    self.omxplayer_loaded.set_position(1)
+                    self.omxplayer_loaded.step()
                     self.omxplayer_loaded.set_position(seek_time_secs)
-                    self.omxplayer_playing.step()
+                    self.omxplayer_loaded.step()
 
                 if seek_result == Seek_Result.SUCCESS:
                     return 'Load and seek success'
@@ -150,12 +154,17 @@ class Player:
                     self.omxplayer_playing.set_position(0)
                     self.omxplayer_playing.step()
 
-        # No file number included. Check there is a file already loaded
-        elif self.loaded_video_number == None:
-            return 'Play failure: no file loaded'
-        # Plain PL command. Play the current video
-        else:
+        # No file number included. Check there is a file already playing
+        elif self.playing_video_number != None:
             new_video_loaded = False
+
+        # Check there is a file already loaded
+        elif self.loaded_video_number != None:
+            new_video_loaded = True
+
+        # No file playing or loaded
+        else:
+            return 'Play failure: no file playing or loaded'
 
         if new_video_loaded:
             # New video has been loaded. Switch the players

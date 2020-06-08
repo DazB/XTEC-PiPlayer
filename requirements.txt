@@ -1,2 +1,3 @@
+pip install git+https://github.com/DazB/python-omxplayer-wrapper.git#egg=omxplayer-wrapper
 pip install asteval
 pip install Flask
