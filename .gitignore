@@ -4,3 +4,4 @@ __pycache__/
 # Log files
 *.log
 debug.log
+web_server/nohup.out

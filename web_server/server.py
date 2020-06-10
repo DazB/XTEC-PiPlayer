@@ -21,13 +21,14 @@ def index():
             config = configparser.ConfigParser()
             config.read(config_path)
             config['MP2']['devdesc'] = request.form['devdesc']
+            ip = config['MP2']['ip']
             with open(config_path, 'w') as configfile:
                 config.write(configfile)
         except Exception as ex:
             print('index.html: Error saving devdesc' + str(ex))
             return render_template('save_error.html', error="index.html: Error saving devdesc to ini:" + str(ex))
         
-        return render_template('submit_ok.html')
+        return render_template('submit_ok.html', ip=ip)
     # Else load page
     else:
         # Grab the details from the ini file to show on the page
@@ -48,10 +49,7 @@ def net():
         try:
             # Check entered info is acceptable
             ip = request.form['ip']
-            if not re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip):
+            if not is_valid_ipv4(ip):
                 raise ValueError('Entered IP address of ' + ip + ' was incorrect')
 
             port = request.form['port']
@@ -59,11 +57,20 @@ def net():
                 raise ValueError('Entered Port number of ' + port + ' was incorrect')
 
             subnet = request.form['subnet']
-            if not re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', subnet):
+            if not is_valid_ipv4(subnet):
                 raise ValueError('Entered Subnet mask of ' + subnet + ' was incorrect')
+
+            gateway = request.form['gateway']
+            if not is_valid_ipv4(gateway):
+                raise ValueError('Entered Gateway of ' + gateway + ' was incorrect')
+
+            dns1 = request.form['dns1']
+            if not is_valid_ipv4(dns1):
+                raise ValueError('Entered DNS 1 of ' + dns1 + ' was incorrect')
+
+            dns2 = request.form['dns2']
+            if not is_valid_ipv4(dns2):
+                raise ValueError('Entered DNS 2 of ' + dns2 + ' was incorrect')
 
         except Exception as ex:
             # A value was incorrectly entered
@@ -77,29 +84,39 @@ def net():
             config['MP2']['ip'] = ip
             config['MP2']['port'] = port
             config['MP2']['subnet'] = subnet
+            config['MP2']['gateway'] = gateway
+            config['MP2']['dns1'] = dns1
+            config['MP2']['dns2'] = dns2
+
             with open(config_path, 'w') as configfile:
                 config.write(configfile)
         except Exception as ex:
             return render_template('save_error.html', error="net.html: Error saving info to ini:" + str(ex))
         
         # Everything is hunky dory. Reboot the system
-        # os.system('sleep 3; sudo reboot')
-        return render_template('submit_ok.html')
+        # os.system("nohup sudo -b bash -c 'sleep 2; reboot' &>/dev/null;")
+        return render_template('submit_ok.html', ip=ip)
 
     # Else load page
     else:
         ip = '*error*'
         port = '*error*'
         subnet = '*error*'
+        gateway = '*error*'
+        dns1 = '*error*'
+        dns2 = '*error*'
         try:
             config = configparser.ConfigParser()
             config.read(config_path)
             ip = config['MP2']['ip']
             port = config['MP2']['port']
             subnet = config['MP2']['subnet']
+            gateway = config['MP2']['gateway']
+            dns1 = config['MP2']['dns1']
+            dns2 = config['MP2']['dns2']
         except Exception as ex:
             print('net.html: Error getting info' + str(ex))
-        return render_template('net.html', ip=ip, port=port, subnet=subnet)
+        return render_template('net.html', ip=ip, port=port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2)
 
 # Digital inputs page
 @app.route('/din.html')
@@ -133,6 +150,15 @@ def save_error():
 @app.route('/submit_ok.html')
 def submit_ok():
     return render_template('submit_ok.html')
+
+def is_valid_ipv4(ip):
+    """A little regex to check if the ip is valid ipv4"""
+    return re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip) 
+
+
 
 # def run_web_server(host):
 #     """Runs the webserver"""

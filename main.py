@@ -20,51 +20,109 @@ class App:
     """Main Application class"""
 
     def __init__(self):
-        """Creates all the application objects"""
+        """Initialise the application"""
 
-        # Get config settings. Will use default values if settings not present or incorrect
+        # Will use these default values if settings not present or incorrect
         ip = '192.168.1.105'
         port = '9999'
         subnet = '255.255.255.0'
         cidr = '24'
         gateway = '192.168.1.1'
-        dns1 = '8.8.8.8'
+        dns1 = '1.1.1.1'
         dns2 = '192.168.1.1'
-
         audio = 'both'
+        devdesc = 'MP2 Default Description'
 
         try:
+            # Go through config file and get settings.
+            # If for whatever reason something is wrong or not there, it will use
+            # default settings and write default to file
+            config_path = '/home/pi/XTEC-PiPlayer/config.ini'
             config = configparser.ConfigParser()
-            config.read('config.ini')
-            mp2_config = config['MP2']
+            config.read(config_path)    # Will be empty if there is no file
+
+            # If there isn't an MP2 section, add it
+            if not config.has_section('MP2'):
+                config['MP2'] = {}
+
             # IP address
-            if mp2_config['ip'] != None:
-                if re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['ip']):
-                    ip = mp2_config['ip']
+            if config.has_option('MP2', 'ip'):
+                if self.is_valid_ipv4(config['MP2']['ip']):
+                    ip = config['MP2']['ip']
+                else:
+                    config['MP2']['ip'] = ip
+            else:
+                config['MP2']['ip'] = ip
+
             # Port number 
-            if mp2_config['port'] != None:
-                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', mp2_config['port']):
-                    port = mp2_config['port']
+            if config.has_option('MP2', 'port'):
+                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', config['MP2']['port']):
+                    port = config['MP2']['port'] 
+                else:
+                    config['MP2']['port']  = port
+            else:
+                config['MP2']['port']  = port
+
             # Subnet mask 
-            if mp2_config['subnet'] != None:
-                if re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['subnet']):
-                    subnet = mp2_config['subnet']
+            if config.has_option('MP2', 'subnet'):
+                if self.is_valid_ipv4(config['MP2']['subnet']):
+                    subnet = config['MP2']['subnet']
                     cidr = str(sum(bin(int(x)).count('1') for x in subnet.split('.')))
+                else:
+                    config['MP2']['subnet'] = subnet
+            else:
+                config['MP2']['subnet'] = subnet
+
+            # Gateway 
+            if config.has_option('MP2', 'gateway'):
+                if self.is_valid_ipv4(config['MP2']['gateway']):
+                    gateway = config['MP2']['gateway']
+                else:
+                    config['MP2']['gateway'] = gateway
+            else:
+                config['MP2']['gateway'] = gateway
+
+            # DNS 1 
+            if config.has_option('MP2', 'dns1'):
+                if self.is_valid_ipv4(config['MP2']['dns1']):
+                    dns1 = config['MP2']['dns1']
+                else:
+                    config['MP2']['dns1'] = dns1
+            else:
+                config['MP2']['dns1'] = dns1
+
+            # DNS 2
+            if config.has_option('MP2', 'dns2'):
+                if self.is_valid_ipv4(config['MP2']['dns2']):
+                    dns2 = config['MP2']['dns2']
+                else:
+                    config['MP2']['dns2'] = dns2
+            else:
+                config['MP2']['dns2'] = dns2
+
             # Audio 
-            if mp2_config['audio'] != None:
-                if re.search(r'^audio$|^local$|^both$', mp2_config['audio']):
-                    audio = mp2_config['audio']
+            if config.has_option('MP2', 'audio'):
+                if re.search(r'^hdmi$|^local$|^both$', config['MP2']['audio']):
+                    audio = config['MP2']['audio']
+                else:
+                    config['MP2']['audio'] = audio
+            else:
+                config['MP2']['audio'] = audio
+
+            # Device Description 
+            if not config.has_option('MP2', 'devdesc'):
+                config['MP2']['devdesc'] = devdesc
+
+            # Write any changes potentially made to config file
+            # If it doesn't exist, will create the file
+            with open(config_path, 'a') as configfile:
+                config.write(configfile)
 
         except Exception as ex:
             print("Main: Config read exception: " + str(ex))
         
         # Edit the dhcpcd.conf file. This controls the network settings in the pi
+        # Once edited, we reset the dhcpcd service to apply the settings
         conf_file = '/etc/dhcpcd.conf'
         try:            
             # Sanitize/validate params above
@@ -86,19 +144,14 @@ class App:
                 data[ethIndex+3] = f'static domain_name_servers={dns1} {dns2}\n'
 
             with open(conf_file, 'w') as file:
-                file.writelines( data )
+                file.writelines(data)
+
+            # Apply changes to the eth0 network interface
+            os.system('sudo ip addr flush dev eth0')
+            os.system('sudo service dhcpcd restart')
 
         except Exception as ex:
-            logging.exception("Network changing error: %s", ex)
-
-        # # Apply changes to the eth0 network interface
-        os.system('sudo ip addr flush dev eth0')
-        os.system('sudo service dhcpcd restart')
-        # os.system('sudo ip link set eth0 down')
-        # os.system('sudo ip addr change ' + ip + '/' + subnet + ' dev eth0')
-        # os.system('sudo ip route del default')
-        # os.system('sudo ip route add default via ' + gateway)
-        # os.system('sudo ip link set eth0 up')
+            print("Error applying network settings: " + str(ex))
 
         # Try to create the player
         self.player = None
@@ -129,9 +182,16 @@ class App:
     def cleanup(self, signum, frame):
         """Application cleanup"""
         print('App: Cleaning up')
-        self.player_tcp_server.server.quit()
+        # self.player_tcp_server.server.quit()
         self.player.quit()
-        sys.exit('App: Quitting. Goodbye')     
+        sys.exit('App: Quitting. Goodbye')
+
+    def is_valid_ipv4(self, ip):
+        """A little regex to check if the ip is valid ipv4"""
+        return re.search(r'^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+            r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+            r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+            r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip) 
 
 
 # Main entry point.
