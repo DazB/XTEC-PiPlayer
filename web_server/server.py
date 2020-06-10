@@ -5,8 +5,7 @@ import re
 import configparser
 import os
 import sys
-
-sys.path.append('/home/pi/XTEC-PiPlayer')
+sys.path.append('/home/pi/XTEC-PiPlayer') # Add path to import from directory
 from mp2_details import config_path, version # pylint: disable=import-error
 
 app = Flask(__name__)

@@ -13,9 +13,10 @@ import re
 import os
 
 # from web_server.server import run_web_server
+from mp2_details import config_path
 from tcp_server import PlayerTCPServer
 from player import Player
-from mp2_details import config_path
+from digital_io import DigitalIO
 
 class App:
     """Main Application class"""
@@ -33,9 +34,17 @@ class App:
         dns2 = '192.168.1.1'
         audio = 'both'
         devdesc = 'MP2 Default Description'
+        input1_on = 'nothing'
+        input1_on_track = '0'
+        input1_off = 'nothing'
+        input1_off_track = '0'
+        input2_on = 'nothing'
+        input2_on_track = '0'
+        input2_off = 'nothing'
+        input2_off_track = '0'
 
         try:
-            # Go through config file and get settings.
+            # Go through config file and get / check settings.
             # If for whatever reason something is wrong or not there, it will use
             # default settings and write default to file
             config = configparser.ConfigParser()
@@ -112,6 +121,50 @@ class App:
             # Device Description 
             if not config.has_option('MP2', 'devdesc'):
                 config['MP2']['devdesc'] = devdesc
+            
+            # Input 1 on  
+            if config.has_option('MP2', 'input1_on'):
+                if not self.is_valid_io_command(config['MP2']['input1_on']):
+                    config['MP2']['input1_on'] = input1_on
+            else:
+                config['MP2']['input1_on'] = input1_on
+
+            # Input 1 off
+            if config.has_option('MP2', 'input1_off'):
+                if not self.is_valid_io_command(config['MP2']['input1_off']):
+                    config['MP2']['input1_off'] = input1_off
+            else:
+                config['MP2']['input1_off'] = input1_off
+
+            # Input 1 on track            
+            if not config.has_option('MP2', 'input1_on_track'):
+                config['MP2']['input1_on_track'] = input1_on_track
+
+            # Input 1 off track
+            if not config.has_option('MP2', 'input1_off_track'):
+                config['MP2']['input1_off_track'] = input1_off_track
+
+            # Input 2 on 
+            if config.has_option('MP2', 'input2_on'):
+                if not self.is_valid_io_command(config['MP2']['input2_on']):
+                    config['MP2']['input2_on'] = input2_on
+            else:
+                config['MP2']['input2_on'] = input2_on
+
+            # Input 2 off
+            if config.has_option('MP2', 'input2_off'):
+                if not self.is_valid_io_command(config['MP2']['input2_off']):
+                    config['MP2']['input2_off'] = input2_off
+            else:
+                config['MP2']['input2_off'] = input2_off
+
+            # Input 2 on track
+            if not config.has_option('MP2', 'input2_on_track'):
+                config['MP2']['input2_on_track'] = input2_on_track
+
+            # Input 2 off track 
+            if not config.has_option('MP2', 'input2_off_track'):
+                config['MP2']['input2_off_track'] = input2_off_track
 
             # Write any changes potentially made to config file
             # If it doesn't exist, will create the file
@@ -168,11 +221,14 @@ class App:
                 print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
                 time.sleep(PLAYER_RETRY_DELAY)
 
-        # Create the tcp server
+        # Create and start the tcp server
         # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
         
-        # Run the webserver
+        # Start the webserver
         # run_web_server(ip)
+
+        # Start the Digital I/O
+        self.digital_io = DigitalIO(self.player)
 
     def run(self):
         """Main app loop"""
@@ -192,6 +248,10 @@ class App:
             r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
             r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
             r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip) 
+    
+    def is_valid_io_command(self, command):
+        """A little regex to check if the IO command is valid"""
+        return re.search(r'^nothing$|^play$|^loop$|^random$|^stop$|^pause$|^audio_mute$|^video_mute$|^macro$', command) 
 
 
 # Main entry point.
