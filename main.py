@@ -15,6 +15,7 @@ import os
 # from web_server.server import run_web_server
 from tcp_server import PlayerTCPServer
 from player import Player
+from mp2_details import config_path
 
 class App:
     """Main Application class"""
@@ -37,7 +38,6 @@ class App:
             # Go through config file and get settings.
             # If for whatever reason something is wrong or not there, it will use
             # default settings and write default to file
-            config_path = '/home/pi/XTEC-PiPlayer/config.ini'
             config = configparser.ConfigParser()
             config.read(config_path)    # Will be empty if there is no file
 

@@ -4,9 +4,10 @@ from werkzeug.serving import run_simple
 import re
 import configparser
 import os
+import sys
 
-version = '0.1'
-config_path = '/home/pi/XTEC-PiPlayer/config.ini'
+sys.path.append('/home/pi/XTEC-PiPlayer')
+from mp2_details import config_path, version # pylint: disable=import-error
 
 app = Flask(__name__)
 
