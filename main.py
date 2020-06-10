@@ -12,7 +12,7 @@ import configparser
 import re
 import os
 
-from web_server.server import run_web_server
+# from web_server.server import run_web_server
 from tcp_server import PlayerTCPServer
 from player import Player
 
@@ -23,9 +23,14 @@ class App:
         """Creates all the application objects"""
 
         # Get config settings. Will use default values if settings not present or incorrect
-        ip = '0.0.0.0'
+        ip = '192.168.1.105'
         port = '9999'
         subnet = '255.255.255.0'
+        cidr = '24'
+        gateway = '192.168.1.1'
+        dns1 = '8.8.8.8'
+        dns2 = '192.168.1.1'
+
         audio = 'both'
 
         try:
@@ -50,6 +55,7 @@ class App:
                 r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
                 r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', mp2_config['subnet']):
                     subnet = mp2_config['subnet']
+                    cidr = str(sum(bin(int(x)).count('1') for x in subnet.split('.')))
             # Audio 
             if mp2_config['audio'] != None:
                 if re.search(r'^audio$|^local$|^both$', mp2_config['audio']):
@@ -58,10 +64,41 @@ class App:
         except Exception as ex:
             print("Main: Config read exception: " + str(ex))
         
-        # Apply changes to the eth0 network interface
-        os.system('sudo ifconfig eth0 down')
-        os.system('sudo ifconfig eth0 ' + ip + ' netmask ' + subnet)
-        os.system('sudo ifconfig eth0 up')
+        # Edit the dhcpcd.conf file. This controls the network settings in the pi
+        conf_file = '/etc/dhcpcd.conf'
+        try:            
+            # Sanitize/validate params above
+            with open(conf_file, 'r') as file:
+                data = file.readlines()
+
+            # Find if config exists
+            ethFound = next((x for x in data if 'interface eth0' in x), None)
+
+            if ethFound:
+                ethIndex = data.index(ethFound)
+                if data[ethIndex].startswith('#'):
+                    data[ethIndex].replace('#', '') # commented out by default, make active
+
+            # If config is found, use index to edit the lines you need ( the next 3)
+            if ethIndex:
+                data[ethIndex+1] = f'static ip_address={ip}/{cidr}\n'
+                data[ethIndex+2] = f'static routers={gateway}\n'
+                data[ethIndex+3] = f'static domain_name_servers={dns1} {dns2}\n'
+
+            with open(conf_file, 'w') as file:
+                file.writelines( data )
+
+        except Exception as ex:
+            logging.exception("Network changing error: %s", ex)
+
+        # # Apply changes to the eth0 network interface
+        os.system('sudo ip addr flush dev eth0')
+        os.system('sudo service dhcpcd restart')
+        # os.system('sudo ip link set eth0 down')
+        # os.system('sudo ip addr change ' + ip + '/' + subnet + ' dev eth0')
+        # os.system('sudo ip route del default')
+        # os.system('sudo ip route add default via ' + gateway)
+        # os.system('sudo ip link set eth0 up')
 
         # Try to create the player
         self.player = None
@@ -79,10 +116,10 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create the tcp server
-        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
+        # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
         
         # Run the webserver
-        run_web_server(ip)
+        # run_web_server(ip)
 
     def run(self):
         """Main app loop"""
