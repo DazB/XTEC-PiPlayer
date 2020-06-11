@@ -285,7 +285,56 @@ def dout():
 # Others page
 @app.route('/oth.html', methods=['POST', 'GET'])
 def oth():
-    return render_template('oth.html')
+    # If user has pressed "Save"
+    if request.method == 'POST':
+        try:
+            # Get the content and make sure it's kosher
+            auto_start = request.form.get('auto_start', default='0')
+            auto_start_track = request.form['auto_start_track']
+
+            # If user selected auto start, make sure there is a track number
+            if (auto_start == '1') and (auto_start_track == ''):
+                raise ValueError('Auto start selected, but not track number entered')
+
+        except Exception as ex:
+            print('oth.html: Error saving options: ' + str(ex))
+            return render_template('save_error.html', error="oth.html: Value error: " + str(ex))
+
+        # Values are okay. Save to ini file
+        try:
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            config['MP2']['auto_start'] = auto_start
+            config['MP2']['auto_start_track'] = auto_start_track
+
+            ip = config['MP2']['ip']
+
+            with open(config_path, 'w') as configfile:
+                config.write(configfile)
+
+        except Exception as ex:
+            print('oth.html: Error saving options: ' + str(ex))
+            return render_template('save_error.html', error="oth.html: Error saving options to ini: " + str(ex))
+
+        return render_template('submit_ok.html', ip=ip)
+
+    # Else load page
+    else:
+        auto_start = '0'
+        auto_start_track = '0'
+
+        try:
+            # Get the content and add to the ini file
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            auto_start = config['MP2']['auto_start']
+            auto_start_track = config['MP2']['auto_start_track']
+
+        except Exception as ex:
+            print('oth.html: Error getting info: ' + str(ex))
+        
+        return render_template('oth.html', auto_start=auto_start, auto_start_track=auto_start_track)
+
 
 # Network data error
 @app.route('/netdata_error.html')
