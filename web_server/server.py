@@ -25,7 +25,7 @@ def index():
             with open(config_path, 'w') as configfile:
                 config.write(configfile)
         except Exception as ex:
-            print('index.html: Error saving devdesc' + str(ex))
+            print('index.html: Error saving devdesc: ' + str(ex))
             return render_template('save_error.html', error="index.html: Error saving devdesc to ini: " + str(ex))
         
         return render_template('submit_ok.html', ip=ip)
@@ -38,7 +38,7 @@ def index():
             config.read(config_path)
             dev_desc = config['MP2']['devdesc']
         except Exception as ex:
-            print('index.html: Error getting info' + str(ex))
+            print('index.html: Error getting info: ' + str(ex))
         return render_template('index.html', dev_desc=dev_desc, version=version)
 
 # Network settings page
@@ -115,7 +115,7 @@ def net():
             dns1 = config['MP2']['dns1']
             dns2 = config['MP2']['dns2']
         except Exception as ex:
-            print('net.html: Error getting info' + str(ex))
+            print('net.html: Error getting info: ' + str(ex))
         return render_template('net.html', ip=ip, port=port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2)
 
 # Digital inputs page
@@ -135,10 +135,10 @@ def din():
             input2_on_track = request.form['input2_on_track']
             input2_off_track = request.form['input2_off_track']
 
-            check_track_input(input1_on, input1_on_track, 'Input 1 On')
-            check_track_input(input1_off, input1_off_track, 'Input 1 Off')
-            check_track_input(input2_on, input2_on_track, 'Input 2 On')
-            check_track_input(input2_off, input2_off_track, 'Input 2 Off')
+            check_input_track(input1_on, input1_on_track, 'Input 1 On')
+            check_input_track(input1_off, input1_off_track, 'Input 1 Off')
+            check_input_track(input2_on, input2_on_track, 'Input 2 On')
+            check_input_track(input2_off, input2_off_track, 'Input 2 Off')
 
             input1_on_ignore = request.form.get('input1_on_ignore', default='0')
             input1_off_ignore = request.form.get('input1_off_ignore', default='0')
@@ -146,7 +146,7 @@ def din():
             input2_off_ignore = request.form.get('input2_off_ignore', default='0')
 
         except Exception as ex:
-            print('din.html: Error saving options' + str(ex))
+            print('din.html: Error saving options: ' + str(ex))
             return render_template('save_error.html', error="din.html: Value error: " + str(ex))
         
         # Values are okay. Save to ini file
@@ -174,7 +174,7 @@ def din():
                 config.write(configfile)
 
         except Exception as ex:
-            print('din.html: Error saving options' + str(ex))
+            print('din.html: Error saving options: ' + str(ex))
             return render_template('save_error.html', error="din.html: Error saving options to ini: " + str(ex))
 
         return render_template('submit_ok.html', ip=ip)
@@ -214,29 +214,83 @@ def din():
             input2_off_ignore = config['MP2']['input2_off_ignore']
 
         except Exception as ex:
-            print('din.html: Error getting info' + str(ex))
+            print('din.html: Error getting info: ' + str(ex))
         
         return render_template('din.html', input1_on=input1_on, input1_off=input1_off, input2_on=input2_on, input2_off=input2_off, \
             input1_on_track=input1_on_track, input1_off_track=input1_off_track, input2_on_track=input2_on_track, input2_off_track=input2_off_track, \
             input1_on_ignore=input1_on_ignore, input1_off_ignore=input1_off_ignore, input2_on_ignore=input2_on_ignore, input2_off_ignore=input2_off_ignore)
 
 # Digital outputs page
-@app.route('/dout.html')
+@app.route('/dout.html', methods=['POST', 'GET'])
 def dout():
-    return render_template('dout.html')
+    # If user has pressed "Save"
+    if request.method == 'POST':
+        try:
+            # Get the content and make sure it's kosher
+            output1 = request.form['output1']
+            output2 = request.form['output2']
 
-@app.route('/gen_error.html')
-def gen_error():
-    return render_template('gen_error.html')
+            output1_track = request.form['output1_track']
+            output2_track = request.form['output2_track']
 
+            check_output_track(output1, output1_track, 'Output 1')
+            check_output_track(output2, output2_track, 'Output 2')
+
+        except Exception as ex:
+            print('dout.html: Error saving options: ' + str(ex))
+            return render_template('save_error.html', error="dout.html: Value error: " + str(ex))
+
+        # Values are okay. Save to ini file
+        try:
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            config['MP2']['output1'] = output1
+            config['MP2']['output2'] = output2
+
+            config['MP2']['output1_track'] = output1_track
+            config['MP2']['output2_track'] = output2_track
+
+            ip = config['MP2']['ip']
+
+            with open(config_path, 'w') as configfile:
+                config.write(configfile)
+
+        except Exception as ex:
+            print('dout.html: Error saving options: ' + str(ex))
+            return render_template('save_error.html', error="dout.html: Error saving options to ini: " + str(ex))
+
+        return render_template('submit_ok.html', ip=ip)
+
+    # Else load page
+    else:
+        output1 = ''
+        output2 = ''
+        output1_track = '0'
+        output2_track = '0'
+
+        try:
+            # Get the content and add to the ini file
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            output1 = config['MP2']['output1']
+            output2 = config['MP2']['output2']
+            output1_track =  config['MP2']['output1_track']
+            output2_track = config['MP2']['output2_track']
+
+        except Exception as ex:
+            print('dout.html: Error getting info: ' + str(ex))
+        
+        return render_template('dout.html', output1=output1, output2=output2, output1_track=output1_track, output2_track=output2_track)
+
+# Others page
+@app.route('/oth.html', methods=['POST', 'GET'])
+def oth():
+    return render_template('oth.html')
+
+# Network data error
 @app.route('/netdata_error.html')
 def netdata_error():
     return render_template('netdata_error.html')
-
-# Others page
-@app.route('/oth.html')
-def oth():
-    return render_template('oth.html')
 
 # Save error page. Shown when there is an error saving data
 @app.route('/save_error.html')
@@ -248,6 +302,11 @@ def save_error():
 def submit_ok():
     return render_template('submit_ok.html')
 
+# General error (currently unused, but we'll keep it)
+@app.route('/gen_error.html')
+def gen_error():
+    return render_template('gen_error.html')
+
 ############################################################################
 # Helper functions
 ############################################################################
@@ -258,9 +317,15 @@ def is_valid_ipv4(ip):
         r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
         r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip) 
 
-def check_track_input(action, track_number, io):
+def check_input_track(action, track_number, io):
     """ Checks track given for I/O input and makes sure its kosher """
     if action == "play" or action == "loop" or action == "random":
+        if track_number == '':
+            raise ValueError('Action ' + action + ' specified for ' + io + ' but no track number entered')
+
+def check_output_track(action, track_number, io):
+    """ Checks track given for I/O output and makes sure its kosher """
+    if action == "on_track" or action == "pulse_track":
         if track_number == '':
             raise ValueError('Action ' + action + ' specified for ' + io + ' but no track number entered')
 

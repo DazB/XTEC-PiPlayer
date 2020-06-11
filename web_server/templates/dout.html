@@ -5,8 +5,8 @@
             {% include 'menu.html' %}
         </td>
         <td>
-            <form action="dout.html" method=get>
-        <td
+            <form action="dout.html" method="POST">
+            <td
             style="width:600px; height:300px; vertical-align:top; border:#888 inset 0px; padding:0px; background-color:#fff;">
             <table style="border:#FFF outset 0px; border-spacing:2px">
                 <tr>
@@ -20,17 +20,16 @@
                         <h3>Digital Output 1:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DO1M" name="DO1M" size=1>
-                            <option value="0" ~DO1Sel(0)~>Not used</option>
-                            <option value="1" ~DO1Sel(1)~>On when any file is playing</option>
-                            <option value="2" ~DO1Sel(2)~>Pulse when any file starts playing
-                            </option>
-                            <option value="3" ~DO1Sel(3)~>On when playing track #:</option>
-                            <option value="4" ~DO1Sel(4)~>Pulse when playing track #:</option>
-                            <option value="5" ~DO1Sel(5)~>On when the player boots</option>
-                            <option value="6" ~DO1Sel(6)~>Pulse when the player boots</option>
-                        </select>&nbsp#
-                        <input id="D01On" type=number name="DO1Trk" value="~DO1Trk~" autocomplete=off min="0" max="9999"
+                        <select id="output1" name="output1" size=1 onchange="show_track(this, 'output1_track');">
+                            <option value="not_used">Not used</option>
+                            <option value="on_playing">On when any file is playing</option>
+                            <option value="pulse_playing">Pulse when any file starts playing</option>
+                            <option value="on_track">On when playing track #:</option>
+                            <option value="pulse_track">Pulse when playing track #:</option>
+                            <option value="on_boot">On when the player boots</option>
+                            <option value="pulse_boot">Pulse when the player boots</option>
+                        </select>&nbsp
+                        <input id="output1_track" type=number name="output1_track" value="{{output1_track}}" autocomplete=off min="0" max="9999"
                             step=1>
                         <p></p>
                     </td>
@@ -40,18 +39,19 @@
                         <h3>Digital Output 2:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DO2M" name="DO2M" size=1>
-                            <option value="0" ~DO2Sel(0)~>Not used</option>
-                            <option value="1" ~DO2Sel(1)~>On when any file is playing</option>
-                            <option value="2" ~DO2Sel(2)~>Pulse when any file starts playing
-                            </option>
-                            <option value="3" ~DO2Sel(3)~>On when playing track #:</option>
-                            <option value="4" ~DO2Sel(4)~>Pulse when playing track #:</option>
-                            <option value="5" ~DO2Sel(5)~>On when the player boots</option>
-                            <option value="6" ~DO2Sel(6)~>Pulse when the player boots</option>
-                        </select>&nbsp#
-                        <input id="DO2Trk" type=number name="DO2Trk" value="~DO2Trk~" autocomplete=off min="0"
+                        <select id="output2" name="output2" size=1 onchange="show_track(this, 'output2_track');">
+                            <option value="not_used">Not used</option>
+                            <option value="on_playing">On when any file is playing</option>
+                            <option value="pulse_playing">Pulse when any file starts playing</option>
+                            <option value="on_track">On when playing track #:</option>
+                            <option value="pulse_track">Pulse when playing track #:</option>
+                            <option value="on_boot">On when the player boots</option>
+                            <option value="pulse_boot">Pulse when the player boots</option>
+                        </select>&nbsp
+                            <input id="output2_track" type=number name="output2_track" value="{{output2_track}}" autocomplete=off min="0"
                             max="9999" step=1>
+                        </span>
+
                         <p></p>
                     </td>
                 </tr>
@@ -62,4 +62,25 @@
         </td>
     </tr>
 </table>
+
+<script>
+    // On load, show saved options, and show or hide track box if needed
+    window.addEventListener("load",function(){
+        document.getElementById("output1").value="{{output1}}";
+        document.getElementById("output2").value="{{output2}}";
+        show_track(document.getElementById("output1"), "output1_track")
+        show_track(document.getElementById("output2"), "output2_track")
+    }, false);
+
+    // Will load track box if needed
+    function show_track(list, track) {
+        if (list.value === "on_track" || 
+            list.value === "pulse_track") {
+            document.getElementById(track).style.display = "";
+        } else {
+            document.getElementById(track).style.display = "none";
+        }
+    }
+</script>
+
 {% include 'footer.html' %}
