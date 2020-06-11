@@ -129,6 +129,7 @@ def din():
             input1_off = request.form['input1_off']
             input2_on = request.form['input2_on']
             input2_off = request.form['input2_off']
+
             input1_on_track = request.form['input1_on_track']
             input1_off_track = request.form['input1_off_track']
             input2_on_track = request.form['input2_on_track']
@@ -138,6 +139,11 @@ def din():
             check_track_input(input1_off, input1_off_track, 'Input 1 Off')
             check_track_input(input2_on, input2_on_track, 'Input 2 On')
             check_track_input(input2_off, input2_off_track, 'Input 2 Off')
+
+            input1_on_ignore = request.form.get('input1_on_ignore', default='0')
+            input1_off_ignore = request.form.get('input1_off_ignore', default='0')
+            input2_on_ignore = request.form.get('input2_on_ignore', default='0')
+            input2_off_ignore = request.form.get('input2_off_ignore', default='0')
 
         except Exception as ex:
             print('din.html: Error saving options' + str(ex))
@@ -151,11 +157,17 @@ def din():
             config['MP2']['input1_off'] = input1_off
             config['MP2']['input2_on'] = input2_on
             config['MP2']['input2_off'] = input2_off
+            
             config['MP2']['input1_on_track'] = input1_on_track
             config['MP2']['input1_off_track'] = input1_off_track
             config['MP2']['input2_on_track'] = input2_on_track
             config['MP2']['input2_off_track'] = input2_off_track
 
+            config['MP2']['input1_on_ignore'] = input1_on_ignore
+            config['MP2']['input1_off_ignore'] = input1_off_ignore
+            config['MP2']['input2_on_ignore'] = input2_on_ignore
+            config['MP2']['input2_off_ignore'] = input2_off_ignore
+            
             ip = config['MP2']['ip']
 
             with open(config_path, 'w') as configfile:
@@ -167,7 +179,6 @@ def din():
 
         return render_template('submit_ok.html', ip=ip)
 
-    
     # Else load page
     else:
         input1_on = ''
@@ -178,6 +189,11 @@ def din():
         input1_off_track = '0'
         input2_on_track = '0'
         input2_off_track = '0'
+        input1_on_ignore = '0'
+        input1_off_ignore = '0'
+        input2_on_ignore = '0'
+        input2_off_ignore = '0'
+
         try:
             # Get the content and add to the ini file
             config = configparser.ConfigParser()
@@ -186,16 +202,23 @@ def din():
             input1_off = config['MP2']['input1_off']
             input2_on =  config['MP2']['input2_on']
             input2_off = config['MP2']['input2_off']
+
             input1_on_track = config['MP2']['input1_on_track']
             input1_off_track = config['MP2']['input1_off_track']
             input2_on_track =  config['MP2']['input2_on_track']
             input2_off_track = config['MP2']['input2_off_track']
 
+            input1_on_ignore = config['MP2']['input1_on_ignore']
+            input1_off_ignore = config['MP2']['input1_off_ignore']
+            input2_on_ignore = config['MP2']['input2_on_ignore']
+            input2_off_ignore = config['MP2']['input2_off_ignore']
+
         except Exception as ex:
             print('din.html: Error getting info' + str(ex))
         
         return render_template('din.html', input1_on=input1_on, input1_off=input1_off, input2_on=input2_on, input2_off=input2_off, \
-            input1_on_track=input1_on_track, input1_off_track=input1_off_track, input2_on_track=input2_on_track, input2_off_track=input2_off_track)
+            input1_on_track=input1_on_track, input1_off_track=input1_off_track, input2_on_track=input2_on_track, input2_off_track=input2_off_track, \
+            input1_on_ignore=input1_on_ignore, input1_off_ignore=input1_off_ignore, input2_on_ignore=input2_on_ignore, input2_off_ignore=input2_off_ignore)
 
 # Digital outputs page
 @app.route('/dout.html')

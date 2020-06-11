@@ -38,7 +38,7 @@
                         <input id="input1_on_track" type=number name="input1_on_track" value="{{input1_on_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
-                        <input type="checkbox" name="02" value="1" ~DI1OnIg~>Ignore input 1 ON
+                        <input id="input1_on_ignore" type="checkbox" name="input1_on_ignore" value="1">Ignore input 1 ON
                         during playback (except track 0)</n1>
                         <p></p>
                     </td>
@@ -63,7 +63,7 @@
                         <input id="input1_off_track" type=number name="input1_off_track" value="{{input1_off_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
-                        <input type="checkbox" name="0A" value="1" ~DI1OffIg~>Ignore input 1 OFF
+                        <input id="input1_off_ignore" type="checkbox" name="input1_off_ignore" value="1">Ignore input 1 OFF
                         during playback (except track 0)
                         <p></p>
                     </td>
@@ -88,7 +88,7 @@
                         <input id="input2_on_track" type=number name="input2_on_track" value="{{input2_on_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
-                        <input type="checkbox" name="12" value="1" ~DI2OnIg~>Ignore input 2 ON
+                        <input id="input2_on_ignore" type="checkbox" name="input2_on_ignore" value="1">Ignore input 2 ON
                         during playback (except track 0)
                         <p></p>
                     </td>
@@ -113,7 +113,7 @@
                         <input id="input2_off_track" type=number name="input2_off_track" value="{{input2_off_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
-                        <input type="checkbox" name="1A" value="1" ~DI2OffIg~>Ignore input 2 OFF
+                        <input id="input2_off_ignore" type="checkbox" name="input2_off_ignore" value="1">Ignore input 2 OFF
                         during playback (except track 0)
                         <p></p>
                     </td>
@@ -138,6 +138,20 @@
         show_track(document.getElementById("input2_on"), "input2_on_track")
         show_track(document.getElementById("input1_off"), "input1_off_track")
         show_track(document.getElementById("input2_off"), "input2_off_track")
+
+        if ("{{input1_on_ignore}}" === "1") {
+            document.getElementById("input1_on_ignore").checked = true;
+        }
+        if ("{{input1_off_ignore}}" === "1") {
+            document.getElementById("input1_off_ignore").checked = true;
+        }
+        if ("{{input2_on_ignore}}" === "1") {
+            document.getElementById("input2_on_ignore").checked = true;
+        }
+        if ("{{input2_off_ignore}}" === "1") {
+            document.getElementById("input2_off_ignore").checked = true;
+        }
+
     }, false);
 
     // Will load track box if needed
