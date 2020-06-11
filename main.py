@@ -12,7 +12,7 @@ import configparser
 import re
 import os
 
-# from web_server.server import run_web_server
+from web_server.server import run_web_server # pylint: disable=import-error
 from mp2_details import config_path
 from tcp_server import PlayerTCPServer
 from player import Player
@@ -167,8 +167,8 @@ class App:
                 config['MP2']['input2_off_track'] = input2_off_track
 
             # Write any changes potentially made to config file
-            # If it doesn't exist, will create the file
-            with open(config_path, 'a') as configfile:
+            # If it doesn't exist, will create the file with the default values
+            with open(config_path, 'w+') as configfile:
                 config.write(configfile)
 
         except Exception as ex:
@@ -225,7 +225,7 @@ class App:
         # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
         
         # Start the webserver
-        # run_web_server(ip)
+        run_web_server(ip)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
@@ -251,7 +251,7 @@ class App:
     
     def is_valid_io_command(self, command):
         """A little regex to check if the IO command is valid"""
-        return re.search(r'^nothing$|^play$|^loop$|^random$|^stop$|^pause$|^audio_mute$|^video_mute$|^macro$', command) 
+        return re.search(r'^nothing$|^play$|^loop$|^random$|^stop$|^pause$|^audio_mute$|^video_mute$|^audio_unmute$|^video_unmute$', command) 
 
 
 # Main entry point.

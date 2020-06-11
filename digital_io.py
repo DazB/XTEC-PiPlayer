@@ -30,9 +30,13 @@ class DigitalIO():
         elif action == 'pause':
             self.player.pause_command()
         elif action == 'audio_mute':
-            self.player.audio_mute_command()
+            self.player.audio_mute_command(1)
         elif action == 'video_mute':
-            self.player.video_mute_command()
+            self.player.video_mute_command(1)
+        elif action == 'audio_unmute':
+            self.player.audio_mute_command(0)
+        elif action == 'video_unmute':
+            self.player.video_mute_command(0)
         
 
     def input_1_active(self):

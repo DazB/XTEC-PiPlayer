@@ -1,4 +1,5 @@
 {% include 'header.html' %}
+
 <table style="border:#eee outset 0px; background-color:#eee; border-spacing:8px">
     <tr>
         <td style="width:80px; vertical-align:top; border:#888 inset 0px; background-color:#eee; padding:0px">
@@ -6,7 +7,7 @@
         </td>
 
         <td>
-            <form action="din.html" method=get>
+            <form action="din.html" method="POST">
         <td
             style="width:600px; height:300px; vertical-align:top; border:#888 inset 0px; padding:0px; background-color:#fff;">
             <table style="border:#FFF outset 0px; border-spacing:2px">
@@ -22,16 +23,19 @@
                         <h3>When Input 1 goes ON:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DI1OnM" name="00" size=1 autofocus>
-                            <option value="0" ~DI1OnSel0~>Do nothing</option>
-                            <option value="1" ~DI1OnSel1~>Play Track #:</option>
-                            <option value="2" ~DI1OnSel2~>Loop Track #:</option>
-                            <option value="3" ~DI1OnSel3~>Play Random Track from 1 to #:</option>
-                            <option value="4" ~DI1OnSel4~>Stop playback</option>
-                            <option value="5" ~DI1OnSel5~>Pause playback</option>
-                            <option value="6" ~DI1OnSel6~>Start Macro #:</option>
+                        <select id="input1_on" name="input1_on" size=1 autofocus onchange="show_track(this, 'input1_on_track');">
+                            <option value="nothing">Do nothing</option>
+                            <option value="play">Play Track #:</option>
+                            <option value="loop">Loop Track #:</option>
+                            <option value="random">Play Random Track from 1 to #:</option>
+                            <option value="stop">Stop playback</option>
+                            <option value="pause">Pause playback</option>
+                            <option value="video_mute">Video Mute</option>
+                            <option value="audio_mute">Audio Mute</option>
+                            <option value="video_unmute">Video Unmute</option>
+                            <option value="audio_unmute">Audio Unmute</option>
                         </select>&nbsp#
-                        <input id="DI1OnTrk" type=number name="01" value="~DI1OnTrk~" autocomplete=off min="0"
+                        <input id="input1_on_track" type=number name="input1_on_track" value="{{input1_on_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
                         <input type="checkbox" name="02" value="1" ~DI1OnIg~>Ignore input 1 ON
@@ -44,16 +48,19 @@
                         <h3>When Input 1 goes OFF:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DI1OffM" name="08" size=1>
-                            <option value="0" ~DI1OffSel(0)~>Do nothing</option>
-                            <option value="1" ~DI1OffSel(1)~>Play Track #:</option>
-                            <option value="2" ~DI1OffSel(2)~>Loop Track #:</option>
-                            <option value="3" ~DI1OffSel(3)~>Play Random Track from 1 to #:</option>
-                            <option value="4" ~DI1OffSel(4)~>Stop playback</option>
-                            <option value="5" ~DI1OffSel(5)~>Pause playback</option>
-                            <option value="6" ~DI1OffSel(6)~>Start Macro #:</option>
+                        <select id="input1_off" name="input1_off" size=1 autofocus onchange="show_track(this, 'input1_off_track');">
+                            <option value="nothing">Do nothing</option>
+                            <option value="play">Play Track #:</option>
+                            <option value="loop">Loop Track #:</option>
+                            <option value="random">Play Random Track from 1 to #:</option>
+                            <option value="stop">Stop playback</option>
+                            <option value="pause">Pause playback</option>
+                            <option value="video_mute">Video Mute</option>
+                            <option value="audio_mute">Audio Mute</option>
+                            <option value="video_unmute">Video Unmute</option>
+                            <option value="audio_unmute">Audio Unmute</option>
                         </select>&nbsp#
-                        <input id="DI1OffTrk" type=number name="09" value="~DI1OffTrk~" autocomplete=off min="0"
+                        <input id="input1_off_track" type=number name="input1_off_track" value="{{input1_off_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
                         <input type="checkbox" name="0A" value="1" ~DI1OffIg~>Ignore input 1 OFF
@@ -66,16 +73,19 @@
                         <h3>When Input 2 goes ON:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DI2OnM" name="10" size=1>
-                            <option value="0" ~DI2OnSel(0)~>Do nothing</option>
-                            <option value="1" ~DI2OnSel(1)~>Play Track #:</option>
-                            <option value="2" ~DI2OnSel(2)~>Loop Track #:</option>
-                            <option value="3" ~DI2OnSel(3)~>Play Random Track from 1 to #:</option>
-                            <option value="4" ~DI2OnSel(4)~>Stop playback</option>
-                            <option value="5" ~DI2OnSel(5)~>Pause playback</option>
-                            <option value="6" ~DI2OnSel(6)~>Start Macro #:</option>
+                        <select id="input2_on" name="input2_on" size=1 onchange="show_track(this, 'input2_on_track');">
+                            <option value="nothing">Do nothing</option>
+                            <option value="play">Play Track #:</option>
+                            <option value="loop">Loop Track #:</option>
+                            <option value="random">Play Random Track from 1 to #:</option>
+                            <option value="stop">Stop playback</option>
+                            <option value="pause">Pause playback</option>
+                            <option value="video_mute">Video Mute</option>
+                            <option value="audio_mute">Audio Mute</option>
+                            <option value="video_unmute">Video Unmute</option>
+                            <option value="audio_unmute">Audio Unmute</option>
                         </select>&nbsp#
-                        <input id="DI2OnTrk" type=number name="11" value="~DI2OnTrk~" autocomplete=off min="0"
+                        <input id="input2_on_track" type=number name="input2_on_track" value="{{input2_on_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
                         <input type="checkbox" name="12" value="1" ~DI2OnIg~>Ignore input 2 ON
@@ -88,16 +98,19 @@
                         <h3>When Input 2 goes OFF:</h3>
                     </td>
                     <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:0px">
-                        <select id="DI2OffM" name="18" size=1>
-                            <option value="0" ~DI2OffSel(0)~>Do nothing</option>
-                            <option value="1" ~DI2OffSel(1)~>Play Track #:</option>
-                            <option value="2" ~DI2OffSel(2)~>Loop Track #:</option>
-                            <option value="3" ~DI2OffSel(3)~>Play Random Track from 1 to #:</option>
-                            <option value="4" ~DI2OffSel(4)~>Stop playback</option>
-                            <option value="5" ~DI2OffSel(5)~>Pause playback</option>
-                            <option value="6" ~DI2OffSel(6)~>Start Macro #:</option>
+                        <select id="input2_off" name="input2_off" size=1 size=1 onchange="show_track(this, 'input2_off_track');">
+                            <option value="nothing">Do nothing</option>
+                            <option value="play">Play Track #:</option>
+                            <option value="loop">Loop Track #:</option>
+                            <option value="random">Play Random Track from 1 to #:</option>
+                            <option value="stop">Stop playback</option>
+                            <option value="pause">Pause playback</option>
+                            <option value="video_mute">Video Mute</option>
+                            <option value="audio_mute">Audio Mute</option>
+                            <option value="video_unmute">Video Unmute</option>
+                            <option value="audio_unmute">Audio Unmute</option>
                         </select>&nbsp#
-                        <input id="DI2OffTrk" type=number name="19" value="~DI2OffTrk~" autocomplete=off min="0"
+                        <input id="input2_off_track" type=number name="input2_off_track" value="{{input2_off_track}}" autocomplete=off min="0"
                             max="9999" step=1>&nbsp
                         <br>
                         <input type="checkbox" name="1A" value="1" ~DI2OffIg~>Ignore input 2 OFF
@@ -110,7 +123,33 @@
             <input id="submit" type=submit name="submit" value="Save">&nbsp&nbsp
             <i1>Save settings to device</i1>
         </td>
-
+        </form>
     </tr>
 </table>
+
+<script>
+    // On load, show saved options, and show or hide track box if needed
+    window.addEventListener("load",function(){
+        document.getElementById("input1_on").value="{{input1_on}}";
+        document.getElementById("input2_on").value="{{input2_on}}";
+        document.getElementById("input1_off").value="{{input1_off}}";
+        document.getElementById("input2_off").value="{{input2_off}}";
+        show_track(document.getElementById("input1_on"), "input1_on_track")
+        show_track(document.getElementById("input2_on"), "input2_on_track")
+        show_track(document.getElementById("input1_off"), "input1_off_track")
+        show_track(document.getElementById("input2_off"), "input2_off_track")
+    }, false);
+
+    // Will load track box if needed
+    function show_track(list, track) {
+        if (list.value === "play" || 
+            list.value === "loop" || 
+            list.value === "random") {
+            document.getElementById(track).style.display = "";
+        } else {
+            document.getElementById(track).style.display = "none";
+        }
+    }
+</script>
+
 {% include 'footer.html' %}
