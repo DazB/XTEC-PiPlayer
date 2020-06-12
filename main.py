@@ -12,7 +12,7 @@ import configparser
 import re
 import os
 
-import web_server.server # pylint: disable=import-error
+from web_server.web_server import run_web_server # pylint: disable=import-error
 from mp2_details import config_path
 from tcp_server import PlayerTCPServer
 from player import Player
@@ -284,21 +284,17 @@ class App:
         
         # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
         os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
-        # Start the webserver
-        web_server.server.run_web_server(ip)
+        
+        # Run the webserver
+        run_web_server(ip)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
 
-    def run(self):
-        """Main app loop"""
-        while True:
-            time.sleep(10)
-
     def cleanup(self, signum, frame):
         """Application cleanup"""
         print('App: Cleaning up')
-        # self.player_tcp_server.server.quit()
+        self.player_tcp_server.server.quit()
         self.player.quit()
         sys.exit('App: Quitting. Goodbye')
 
@@ -334,6 +330,3 @@ if __name__ == '__main__':
     # Sets app exit signals to call cleanup
     signal.signal(signal.SIGINT, app.cleanup)
     signal.signal(signal.SIGTERM, app.cleanup)
-
-    # Run the app :D TODO: try comment this out?
-    app.run()

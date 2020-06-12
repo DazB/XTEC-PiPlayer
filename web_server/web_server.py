@@ -5,6 +5,7 @@ import re
 import configparser
 import os
 import sys
+import threading
 sys.path.append('/home/pi/XTEC-PiPlayer') # Add path to import from directory
 from mp2_details import config_path, version # pylint: disable=import-error
 
@@ -378,11 +379,16 @@ def check_output_track(action, track_number, io):
         if track_number == '':
             raise ValueError('Action ' + action + ' specified for ' + io + ' but no track number entered')
 
-# def run_web_server(host):
-#     """Runs the webserver"""
-#     app.run(host=host, port=8080)
+def run_web_server(host):
+    """Runs the webserver in a seperate thread"""
+    server_thread = threading.Thread(target=app.run, kwargs={'host':host, 'port':8080})
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
+
     
-if __name__ == "__main__":
-    """Runs the webserver"""
-    app.run()
-    # app.run(host='192.168.1.105',port=8080)
+# if __name__ == "__main__":
+#     """Runs the webserver"""
+#     app.run()
+#     app.run(host=host, port=8080)
+
