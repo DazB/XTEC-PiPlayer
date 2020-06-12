@@ -60,27 +60,33 @@ class PlayerTCPServer():
 
             def handle(self):
                 """Handles incoming TCP data"""
-                self.data = self.rfile.readline().strip()   # Get data
-                
-                print("{} wrote:".format(self.client_address[0]))
-                print(self.data)
+                while True:
+                    self.data = self.rfile.readline().strip()   # Get data
+                    
+                    # Keeps connection open until client disconnects
+                    if not self.data:
+                        print("Client {} disconnected".format(self.client_address[0]))
+                        break
 
-                # Get first 2 letters, then search dictionary to call corresponding command
-                # Calls bad_command by default (essentially a switch, but python don't do switch)
-                command = self.data[0:2].decode().upper()
-                command_func = self.command_dict.get(command, self.bad_command)
-                try:
-                    # Pass rest of the data packet to the function (could be nothing), and execute player command
-                    msg_data = self.data[2:].decode()
-                    msg_data = msg_data.lstrip()
-                    msg_data = msg_data.strip()
-                    response = command_func(msg_data)
-                    # Respond with whatever player command returned
-                    self.wfile.write(response.encode())
+                    print("{} wrote:".format(self.client_address[0]))
+                    print(self.data)
 
-                except Exception as ex:
-                    print("TCP Handle: Error processing command: " + str(ex))
-                    self.bad_command()
+                    # Get first 2 letters, then search dictionary to call corresponding command
+                    # Calls bad_command by default (essentially a switch, but python don't do switch)
+                    command = self.data[0:2].decode().upper()
+                    command_func = self.command_dict.get(command, self.bad_command)
+                    try:
+                        # Pass rest of the data packet to the function (could be nothing), and execute player command
+                        msg_data = self.data[2:].decode()
+                        msg_data = msg_data.lstrip()
+                        msg_data = msg_data.strip()
+                        response = command_func(msg_data)
+                        # Respond with whatever player command returned
+                        self.wfile.write(response.encode())
+
+                    except Exception as ex:
+                        print("TCP Handle: Error processing command: " + str(ex))
+                        self.bad_command()
 
             def bad_command(self):
                 self.wfile.write('Error: unknown command'.encode())
