@@ -12,11 +12,12 @@ import configparser
 import re
 import os
 
-from web_server.server import run_web_server # pylint: disable=import-error
+import web_server.server # pylint: disable=import-error
 from mp2_details import config_path
 from tcp_server import PlayerTCPServer
 from player import Player
 from digital_io import DigitalIO
+
 
 class App:
     """Main Application class"""
@@ -25,7 +26,7 @@ class App:
         """Initialise the application"""
 
         # Will use these default values if settings not present or incorrect
-        ip = '192.168.1.105'
+        ip = '192.168.1.101'
         port = '9999'
         subnet = '255.255.255.0'
         cidr = '24'
@@ -35,13 +36,23 @@ class App:
         audio = 'both'
         devdesc = 'MP2 Default Description'
         input1_on = 'nothing'
-        input1_on_track = '0'
         input1_off = 'nothing'
-        input1_off_track = '0'
         input2_on = 'nothing'
-        input2_on_track = '0'
         input2_off = 'nothing'
+        input1_on_track = '0'
+        input1_off_track = '0'
+        input2_on_track = '0'
         input2_off_track = '0'
+        input1_on_ignore = '0'
+        input1_off_ignore = '0'
+        input2_on_ignore = '0'
+        input2_off_ignore = '0'
+        output1 = 'not_used'
+        output2 = 'not_used'
+        output1_track = '0'
+        output2_track = '0'
+        auto_start = '0'
+        auto_start_track = '0'
 
         try:
             # Go through config file and get / check settings.
@@ -124,17 +135,31 @@ class App:
             
             # Input 1 on  
             if config.has_option('MP2', 'input1_on'):
-                if not self.is_valid_io_command(config['MP2']['input1_on']):
+                if not self.is_valid_input_io_command(config['MP2']['input1_on']):
                     config['MP2']['input1_on'] = input1_on
             else:
                 config['MP2']['input1_on'] = input1_on
 
             # Input 1 off
             if config.has_option('MP2', 'input1_off'):
-                if not self.is_valid_io_command(config['MP2']['input1_off']):
+                if not self.is_valid_input_io_command(config['MP2']['input1_off']):
                     config['MP2']['input1_off'] = input1_off
             else:
                 config['MP2']['input1_off'] = input1_off
+
+            # Input 2 on 
+            if config.has_option('MP2', 'input2_on'):
+                if not self.is_valid_input_io_command(config['MP2']['input2_on']):
+                    config['MP2']['input2_on'] = input2_on
+            else:
+                config['MP2']['input2_on'] = input2_on
+
+            # Input 2 off
+            if config.has_option('MP2', 'input2_off'):
+                if not self.is_valid_input_io_command(config['MP2']['input2_off']):
+                    config['MP2']['input2_off'] = input2_off
+            else:
+                config['MP2']['input2_off'] = input2_off
 
             # Input 1 on track            
             if not config.has_option('MP2', 'input1_on_track'):
@@ -144,20 +169,6 @@ class App:
             if not config.has_option('MP2', 'input1_off_track'):
                 config['MP2']['input1_off_track'] = input1_off_track
 
-            # Input 2 on 
-            if config.has_option('MP2', 'input2_on'):
-                if not self.is_valid_io_command(config['MP2']['input2_on']):
-                    config['MP2']['input2_on'] = input2_on
-            else:
-                config['MP2']['input2_on'] = input2_on
-
-            # Input 2 off
-            if config.has_option('MP2', 'input2_off'):
-                if not self.is_valid_io_command(config['MP2']['input2_off']):
-                    config['MP2']['input2_off'] = input2_off
-            else:
-                config['MP2']['input2_off'] = input2_off
-
             # Input 2 on track
             if not config.has_option('MP2', 'input2_on_track'):
                 config['MP2']['input2_on_track'] = input2_on_track
@@ -165,6 +176,53 @@ class App:
             # Input 2 off track 
             if not config.has_option('MP2', 'input2_off_track'):
                 config['MP2']['input2_off_track'] = input2_off_track
+
+            # Input 1 on ignore             
+            if not config.has_option('MP2', 'input1_on_ignore'):
+                config['MP2']['input1_on_ignore'] = input1_on_ignore
+
+            # Input 1 off ignore
+            if not config.has_option('MP2', 'input1_off_ignore'):
+                config['MP2']['input1_off_ignore'] = input1_off_ignore
+
+            # Input 2 on ignore
+            if not config.has_option('MP2', 'input2_on_ignore'):
+                config['MP2']['input2_on_ignore'] = input2_on_ignore
+
+            # Input 2 off ignore 
+            if not config.has_option('MP2', 'input2_off_ignore'):
+                config['MP2']['input2_off_ignore'] = input2_off_ignore
+
+            # Output 1 
+            if config.has_option('MP2', 'output1'):
+                if not self.is_valid_output_io_command(config['MP2']['output1']):
+                    config['MP2']['output1'] = output1
+            else:
+                config['MP2']['output1'] = output1
+
+            # Output 2
+            if config.has_option('MP2', 'output2'):
+                if not self.is_valid_output_io_command(config['MP2']['output2']):
+                    config['MP2']['output2'] = output2
+            else:
+                config['MP2']['output2'] = output2
+
+            # Output 1 track            
+            if not config.has_option('MP2', 'output1_track'):
+                config['MP2']['output1_track'] = output1_track
+
+            # Output 2 track
+            if not config.has_option('MP2', 'output2_track'):
+                config['MP2']['output2_track'] = output2_track
+
+            # Auto Start
+            if not config.has_option('MP2', 'auto_start'):
+                config['MP2']['auto_start'] = auto_start
+
+            # Auto Start track
+            if not config.has_option('MP2', 'auto_start_track'):
+                config['MP2']['auto_start_track'] = auto_start_track
+
 
             # Write any changes potentially made to config file
             # If it doesn't exist, will create the file with the default values
@@ -222,10 +280,12 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create and start the tcp server
-        # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
+        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
         
+        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
+        os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
         # Start the webserver
-        run_web_server(ip)
+        web_server.server.run_web_server(ip)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
@@ -249,10 +309,13 @@ class App:
             r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
             r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', ip) 
     
-    def is_valid_io_command(self, command):
-        """A little regex to check if the IO command is valid"""
+    def is_valid_input_io_command(self, command):
+        """A little regex to check if the input IO command is valid"""
         return re.search(r'^nothing$|^play$|^loop$|^random$|^stop$|^pause$|^audio_mute$|^video_mute$|^audio_unmute$|^video_unmute$', command) 
 
+    def is_valid_output_io_command(self, command):
+        """A little regex to check if the output IO command is valid"""
+        return re.search(r'^not_used$|^on_playing$|^pulse_playing$|^on_track$|^pulse_track$|^on_boot$|^pulse_boot$', command) 
 
 # Main entry point.
 if __name__ == '__main__':
@@ -272,5 +335,5 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, app.cleanup)
     signal.signal(signal.SIGTERM, app.cleanup)
 
-    # Run the app :D
+    # Run the app :D TODO: try comment this out?
     app.run()
