@@ -105,14 +105,7 @@ class Player:
                 seek_result, seek_time_secs = self._get_seek_time(seek_timestamp, fps, duration)
 
                 if (seek_result == Seek_Result.SUCCESS) or (seek_result == Seek_Result.SUCCESS_FRAME_ERROR):
-                    # Seek to correct position in the video (Have to a little intermediate seek because of bug in OMX)
-                    # where setting position to somewhere too early causes it to break. 
-                    self.omxplayer_loaded.step()
-                    time.sleep(0.1)
-                    self.omxplayer_loaded.set_position(1)
-                    time.sleep(0.1)
-                    self.omxplayer_loaded.step()
-                    time.sleep(0.1)
+                    # Seek to correct position in the video 
                     self.omxplayer_loaded.set_position(seek_time_secs)
                     time.sleep(0.1)
                     self.omxplayer_loaded.step()
@@ -545,6 +538,7 @@ class Player:
             # Video has ended, and we are looping. Play same video and move to playing layer
             self.omxplayer_loop.set_layer(LAYER_PLAYING)
             self.omxplayer_loop.play()
+
             self.omxplayer_playing.quit()
             self.omxplayer_playing = None
             
