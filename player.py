@@ -60,10 +60,16 @@ class Player:
         self.loaded_video_number = None     # Loaded video file number
         self.playing_video_path = None      # Playing video file path
         self.loaded_video_path = None       # Loaded video file path
-        self._is_looping = False            # If we're looping the video
+        self.is_playing = False             # If we're currently playing something (i.e. not paused)
+        self.is_looping = False             # If we're looping the video
         self._audio_muted = False           # If we've muted the video
         self._loop_number = 0               # Increments whenever a loop occurs, to ensure looping videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for looping the video
+        self._stop_check_end_thread = False        # Flag to stop thread
+        
+        # Events for Digital I/O
+        self.playing_event = Event()        # Playing event. Called when player starts playing
+        self.not_playing_event = Event()    # Not playing event. Called when player isn't playing. 
 
         # Main folder where all videos are kept
         self.video_folder = 'testfiles/' # TODO: this will obvs change
@@ -158,6 +164,8 @@ class Player:
                     self.omxplayer_playing.set_position(0)
                     time.sleep(0.1)
                     self.omxplayer_playing.step()
+                    # Restart the thread to check for end of video
+                    self._restart_check_end()
 
         # No file number included. Check there is a file already playing
         elif self.playing_video_number != None:
@@ -173,28 +181,21 @@ class Player:
 
         if new_video_loaded:
             # New video has been loaded. Switch the players
-            self.omxplayer_loaded.set_layer(LAYER_PLAYING)
-
-            if self.omxplayer_playing != None:
-                self.omxplayer_playing.mute()
-                self.omxplayer_playing.quit()
-                self.omxplayer_playing = None
-
-            self.omxplayer_playing = self.omxplayer_loaded
-            self.omxplayer_loaded = None
-
-            self.playing_video_number = self.loaded_video_number
-            self.playing_video_path = self.loaded_video_path
-            self.loaded_video_number = None
-            self.loaded_video_path = None
+            self._stop_check_end_thread = True
+            self._switch_loaded_to_playing()
             
         self.omxplayer_playing.play()
+        self.playing_event(self) # Notify we're playing
+        self.is_playing = True
 
-        self._is_looping = False  # Controls loop
+        self.is_looping = False  # Controls loop
         if self.omxplayer_loop != None:
             self.omxplayer_loop.quit()
             self.omxplayer_loop = None
 
+        if new_video_loaded:
+            # Restart the thread to check for end of video
+            self._restart_check_end()
 
         return 'Play success'     
 
@@ -205,6 +206,9 @@ class Player:
         if self.playing_video_number == None:
             return 'Pause failure: no file loaded'
         self.omxplayer_playing.pause()
+        self.not_playing_event(self) # Notify we're not playing
+        self.is_playing = False
+
         return 'Pause success' 
 
     def loop_command(self, msg_data):
@@ -228,6 +232,8 @@ class Player:
                     self.omxplayer_playing.set_position(0)
                     time.sleep(0.1)
                     self.omxplayer_playing.step()
+                    # Restart the thread to check for end of video
+                    self._restart_check_end()
 
         # No file number included. Check there is a file already playing
         elif self.playing_video_number != None:
@@ -242,47 +248,35 @@ class Player:
             return 'Loop failure: no file playing or loaded'
 
         if new_video_loaded:
-            # If we were looping the old video, kill the thread to check the end to die
-            if self._is_looping == True:
-                self._is_looping = False
-                self._check_end_thread.join()
-
             # New video has been loaded. Switch the players and play
-            self.omxplayer_loaded.set_layer(LAYER_PLAYING)
-
-            if self.omxplayer_playing != None:
-                self.omxplayer_playing.quit()
-                self.omxplayer_playing = None
-            if self.omxplayer_loop != None:
-                self.omxplayer_loop.quit()
-                self.omxplayer_loop = None
-            
-            self.omxplayer_playing = self.omxplayer_loaded
-            self.omxplayer_loaded = None
-
-            self.playing_video_number = self.loaded_video_number
-            self.playing_video_path = self.loaded_video_path
-            self.loaded_video_number = None
-            self.loaded_video_path = None
+            self.is_looping = False
+            self._stop_check_end_thread = True
+            self._switch_loaded_to_playing()
 
         # Play video
         self.omxplayer_playing.play()
+        self.playing_event(self) # Notify we're playing
+        self.is_playing = True
 
         # Return if we're already looping
-        if self._is_looping == True:
+        if self.is_looping == True:
             return 'Loop success' 
 
         # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
-        self.omxplayer_loop = OMXPlayer(self.playing_video_path, mute=self._audio_muted, \
+        if self.omxplayer_loop != None:
+            self.omxplayer_loop.quit()
+            self.omxplayer_loop = None
+
+        self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
             dbus_name='org.mpris.MediaPlayer2.omxplayerloop'+ str(self.playing_video_number) + '_' + str(self._loop_number), \
             args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
         self._loop_number += 1 # Increment loop number
 
-        # Start thread to check end of playing video
-        self._is_looping = True
-        self._check_end_thread = threading.Thread(target=self._check_end)
-        self._check_end_thread.daemon = True
-        self._check_end_thread.start()
+        self.is_looping = True
+
+        if new_video_loaded:
+            # Restart the thread to check for end of video
+            self._restart_check_end()
         
         return 'Loop success' 
 
@@ -294,6 +288,8 @@ class Player:
         if self.playing_video_number == None:
             return 'Stop failure: no file loaded'
         self.omxplayer_playing.stop()
+        self.not_playing_event(self) # Notify we're not playing
+        self.is_playing = False
         return 'Stop success'
 
     def seek_command(self, msg_data):
@@ -413,7 +409,7 @@ class Player:
         if self.omxplayer_loop != None:
             self.omxplayer_loop.quit()
         # If there is a looping thread, kill it
-        self._is_looping = False
+        self.is_looping = False
         if self._check_end_thread != None: 
             self._check_end_thread.join() # wait for end of thread
         self.black.quit()
@@ -444,7 +440,7 @@ class Player:
             if file_number == video_number:
                 # We have a match
                 # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
-                self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), mute=self._audio_muted, \
+                self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
                     dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number), \
                     args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)])
 
@@ -526,36 +522,64 @@ class Player:
         return fps, duration
 
     def _check_end(self): 
-        """Will constantly poll currently playing media to check if it's stopped, or if we're no longer looping"""
-        # Wrap in try except as it is possible for omxplayer to be closed, and thus raise an exception
-        try:
-            while (self.omxplayer_playing.playback_status() != 'Done') and (self._is_looping):
-                time.sleep(0.01)
-        except Exception as ex:
-            # Playing omxplayer has been closed. Looping has been cancelled
-            print('Exception in check end thread. Most likely playing omxplayer has been closed: ' + str(ex))
-            return
+        """Will constantly poll currently playing media to check if it's stopped"""
+        while True:
+            # Wrap in try except as it is possible for omxplayer to be closed, and thus raise an exception
+            try:
+                while (self.omxplayer_playing.playback_status() != 'Done') and (not self._stop_check_end_thread):
+                    time.sleep(0.01)
+            except Exception as ex:
+                # Playing omxplayer has been closed. Looping has been cancelled
+                print('Exception in check end thread. Most likely playing omxplayer has been closed: ' + str(ex))
+                self.not_playing_event(self)
+                self.is_playing = False
+                return
+            
+            # If we're not looping or we're just ending the thread
+            if (self.is_looping == False) or (self._stop_check_end_thread):
+                self.not_playing_event(self)
+                self.is_playing = False
+                self._stop_check_end_thread = False
+                return
 
-        if self._is_looping == False:
-            # If we're no longer looping, return
-            return
+            # Video has ended, and we are looping. Play same video and move to playing layer
+            self.omxplayer_loop.set_layer(LAYER_PLAYING)
+            self.omxplayer_loop.play()
+            self.omxplayer_playing.quit()
+            self.omxplayer_playing = None
+            
+            self.omxplayer_playing = self.omxplayer_loop
+            self.omxplayer_loop = None
+            
+            # Reload same video on the "loop layer".
+            self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
+                dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._loop_number), \
+                args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
+            self._loop_number += 1 # Increment loop number
 
-        # Video has ended, we are now looping. Play same video and move to playing layer
-        self.omxplayer_loop.set_layer(LAYER_PLAYING)
-        self.omxplayer_loop.play()
-        self.omxplayer_playing.quit()
-        self.omxplayer_playing = None
-        
-        self.omxplayer_playing = self.omxplayer_loop
-        self.omxplayer_loop = None
-        
-        # Reload same video on the "loop layer".
-        self.omxplayer_loop = OMXPlayer(self.playing_video_path, mute=self._audio_muted, \
-            dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._loop_number), \
-            args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
-        self._loop_number += 1 # Increment loop number
-
-        # Reset thread
-        self._check_end_thread = threading.Thread(target=self._check_end)
-        self._check_end_thread.daemon = True
+    def _restart_check_end(self):
+        """Restarts the check for end thread"""
+        # Wait for old thread to exit
+        if self._check_end_thread != None:
+            while self._check_end_thread.is_alive():
+                pass
+        # Start thread to check end of playing video
+        self._stop_check_end_thread = False
+        self._check_end_thread = threading.Thread(target=self._check_end, daemon=True)
         self._check_end_thread.start()
+
+    def _switch_loaded_to_playing(self):
+        """Puts loaded player to top layer"""
+        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
+
+        if self.omxplayer_playing != None:
+            self.omxplayer_playing.quit()
+            self.omxplayer_playing = None
+
+        self.omxplayer_playing = self.omxplayer_loaded
+        self.omxplayer_loaded = None
+
+        self.playing_video_number = self.loaded_video_number
+        self.playing_video_path = self.loaded_video_path
+        self.loaded_video_number = None
+        self.loaded_video_path = None
