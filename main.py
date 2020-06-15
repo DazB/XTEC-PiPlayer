@@ -26,7 +26,7 @@ class App:
         """Initialise the application"""
 
         # Will use these default values if settings not present or incorrect
-        ip = '192.168.1.101'
+        ip = '192.168.1.105'
         port = '9999'
         subnet = '255.255.255.0'
         cidr = '24'
@@ -218,10 +218,14 @@ class App:
             # Auto Start
             if not config.has_option('MP2', 'auto_start'):
                 config['MP2']['auto_start'] = auto_start
+            else:
+                auto_start = config['MP2']['auto_start']
 
             # Auto Start track
             if not config.has_option('MP2', 'auto_start_track'):
                 config['MP2']['auto_start_track'] = auto_start_track
+            else:
+                auto_start_track = config['MP2']['auto_start_track']
 
 
             # Write any changes potentially made to config file
@@ -248,7 +252,7 @@ class App:
                 if data[ethIndex].startswith('#'):
                     data[ethIndex].replace('#', '') # commented out by default, make active
 
-            # If config is found, use index to edit the lines you need ( the next 3)
+            # If config is found, use index to edit the lines you need (the next 3)
             if ethIndex:
                 data[ethIndex+1] = f'static ip_address={ip}/{cidr}\n'
                 data[ethIndex+2] = f'static routers={gateway}\n'
@@ -257,9 +261,9 @@ class App:
             with open(conf_file, 'w') as file:
                 file.writelines(data)
 
-            # Apply changes to the eth0 network interface
-            os.system('sudo ip addr flush dev eth0')
-            os.system('sudo service dhcpcd restart')
+            # # Apply changes to the eth0 network interface
+            # os.system('sudo ip addr flush dev eth0')
+            # os.system('sudo service dhcpcd restart')
 
         except Exception as ex:
             print("Error applying network settings: " + str(ex))
@@ -280,16 +284,21 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create and start the tcp server
-        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
-        
-        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
+        # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
+        self.player_tcp_server = PlayerTCPServer(self.player, '192.168.1.105', port)
+
+        # # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
         os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
         
-        # Run the webserver
+        # # Run the webserver
         run_web_server(ip)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
+
+        # Check auto start
+        if auto_start == '1':
+            self.player.play_command(auto_start_track)
 
     def cleanup(self, signum, frame):
         """Application cleanup"""
