@@ -47,7 +47,7 @@ class Player:
         print("Player: Creating instance")
         # First, we create a player that plays a black screen and stops. This is a little bit of a hacky way to get
         # a black background which we still have control over, but it works, and performance is good
-        self.black = OMXPlayer('black.mp4', dbus_name='org.mpris.MediaPlayer2.omxplayerblack', \
+        self.black = OMXPlayer('/home/pi/XTEC-PiPlayer/black.mp4', dbus_name='org.mpris.MediaPlayer2.omxplayerblack', \
             args=['--no-osd', '--no-keys', '-b', '--end-paused', '--layer='+str(LAYER_UNMUTE)])
 
         # Set OMX players (None until a video is loaded)
@@ -71,7 +71,7 @@ class Player:
         self.not_playing_event = Event()    # Not playing event. Called when player isn't playing. 
 
         # Main folder where all videos are kept
-        self.video_folder = 'testfiles/' # TODO: this will obvs change
+        self.video_folder = '/home/pi/XTEC-PiPlayer/testfiles/' # TODO: this will obvs change
 
     ################################################################################
     # Player command functions

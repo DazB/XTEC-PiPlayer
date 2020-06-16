@@ -261,9 +261,9 @@ class App:
             with open(conf_file, 'w') as file:
                 file.writelines(data)
 
-            # # Apply changes to the eth0 network interface
-            # os.system('sudo ip addr flush dev eth0')
-            # os.system('sudo service dhcpcd restart')
+            # Apply changes to the eth0 network interface
+            os.system('sudo ip addr flush dev eth0')
+            os.system('sudo service dhcpcd restart')
 
         except Exception as ex:
             print("Error applying network settings: " + str(ex))
@@ -284,13 +284,12 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create and start the tcp server
-        # self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
-        self.player_tcp_server = PlayerTCPServer(self.player, '192.168.1.105', port)
+        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
 
-        # # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
+        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
         os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
         
-        # # Run the webserver
+        # Run the webserver
         run_web_server(ip)
 
         # Start the Digital I/O

@@ -95,7 +95,7 @@ def net():
             return render_template('save_error.html', error="net.html: Error saving info to ini: " + str(ex))
         
         # Everything is hunky dory. Reboot the system
-        # os.system("nohup sudo -b bash -c 'sleep 2; reboot' &>/dev/null;")
+        os.system("nohup sudo -b bash -c 'sleep 2; reboot' &>/dev/null;")
         return render_template('submit_ok.html', ip=ip)
 
     # Else load page
@@ -381,9 +381,7 @@ def check_output_track(action, track_number, io):
 
 def run_web_server(host):
     """Runs the webserver in a seperate thread"""
-    server_thread = threading.Thread(target=app.run, kwargs={'host':host, 'port':8080})
-    # Exit the server thread when the main thread terminates
-    server_thread.daemon = True
+    server_thread = threading.Thread(target=app.run, kwargs={'host':host, 'port':8080}, daemon=True)
     server_thread.start()
 
     

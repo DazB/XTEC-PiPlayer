@@ -4,7 +4,7 @@ import configparser
 import random
 from mp2_details import config_path
 
-import debugpy
+# import debugpy
 
 class DigitalIO():
     """The digital IO control for the player"""
@@ -119,7 +119,6 @@ class DigitalIO():
     def player_playing_event(self, player):
         """Event handler for whenever the player starts playing"""
         try:
-            debugpy.breakpoint()
             config = configparser.ConfigParser()
             config.read(config_path)
             self.do_output_action(config['MP2']['output1'], config['MP2']['output1_track'], self.output_1)
