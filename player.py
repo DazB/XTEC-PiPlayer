@@ -184,9 +184,6 @@ class Player:
         self.is_playing = True
 
         self.is_looping = False  # Controls loop
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-            self.omxplayer_loop = None
 
         return 'Play success'     
 
@@ -257,10 +254,6 @@ class Player:
             return 'Loop success' 
 
         # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-            self.omxplayer_loop = None
-
         arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
         if self._audio_muted:
             arguments.append('--vol=-10000')
@@ -522,8 +515,8 @@ class Player:
                     # Video has ended, and we are looping. Play same video and move to playing layer.
                     # When moving to playing layer, it automatically plays the video in omx
                     self.omxplayer_loop.set_layer(LAYER_PLAYING)
-
                     self.omxplayer_playing.quit()
+
                     self.omxplayer_playing = None
                     
                     self.omxplayer_playing = self.omxplayer_loop
@@ -563,13 +556,17 @@ class Player:
 
     def _switch_loaded_to_playing(self):
         """Puts loaded player to top layer"""
-        # When moving to playing layer, it automatically plays the video in omx
-        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
-
+        if self.omxplayer_loop != None:
+            self.omxplayer_loop.quit()
+            self.omxplayer_loop = None
+        
         if self.omxplayer_playing != None:
             self.omxplayer_playing.quit()
             self.omxplayer_playing = None
             self._check_end_thread.join()
+
+        # When moving to playing layer, it automatically plays the video in omx
+        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
 
         self.omxplayer_playing = self.omxplayer_loaded
         self.omxplayer_loaded = None
