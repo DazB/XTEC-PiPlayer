@@ -260,9 +260,13 @@ class Player:
             self.omxplayer_loop.quit()
             self.omxplayer_loop = None
 
+        arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
+        if self._audio_muted:
+            arguments.append('--vol=-10000')
+
         self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
             dbus_name='org.mpris.MediaPlayer2.omxplayerloop'+ str(self.playing_video_number) + '_' + str(self._loop_number), \
-            args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
+            args=arguments)
         self._loop_number += 1 # Increment loop number
 
         self.is_looping = True
@@ -347,45 +351,37 @@ class Player:
         if mute_option == 0:
             self._audio_muted = False
             if self.omxplayer_playing != None:
-                self.omxplayer_playing.unmute()
+                self.omxplayer_playing.set_volume(1)
             if self.omxplayer_loaded != None:
                 # Found I have to do this stepping and position nonsense to "kick in"
                 # the mute and unmute. Otherwise can hear very briefly once video starts
-                self.omxplayer_loaded.unmute()
-                self.omxplayer_loaded.step()
-                time.sleep(0.1)
+                self.omxplayer_loaded.set_volume(1)
                 self.omxplayer_loaded.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
-                self.omxplayer_loop.unmute()
-                self.omxplayer_loop.step()
-                time.sleep(0.1)
+                self.omxplayer_loop.set_volume(1)
                 self.omxplayer_loop.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loop.step()
-            return 'Audio Mute success: video unmuted'
+            return 'Audio Mute success: audio unmuted'
         # If we're muting
         elif mute_option == 1:
             self._audio_muted = True
             if self.omxplayer_playing != None:
-                self.omxplayer_playing.mute()
+                self.omxplayer_playing.set_volume(0)
             if self.omxplayer_loaded != None:
-                self.omxplayer_loaded.mute()
-                self.omxplayer_loaded.step()
-                time.sleep(0.1)
+                self.omxplayer_loaded.set_volume(0)
                 self.omxplayer_loaded.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loaded.step()
             if self.omxplayer_loop != None:
-                self.omxplayer_loop.mute()
-                self.omxplayer_loop.step()
-                time.sleep(0.1)
+                self.omxplayer_loop.set_volume(0)
                 self.omxplayer_loop.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loop.step()
 
-            return 'Audio Mute success: video muted'
+            return 'Audio Mute success: audio muted'
         else:
             return 'Audio Mute error: specify 0 for unmute and 1 for mute'
            
@@ -433,9 +429,12 @@ class Player:
             if file_number == video_number:
                 # We have a match
                 # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
+                arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)]
+                if self._audio_muted:
+                    arguments.append('--vol=-10000')
                 self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
                     dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number), \
-                    args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)])
+                    args=arguments)
 
                 # Keep track of loaded video
                 self.loaded_video_number = video_number 
@@ -546,9 +545,13 @@ class Player:
             self.omxplayer_loop = None
             
             # Reload same video on the "loop layer".
+            arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
+            if self._audio_muted:
+                arguments.append('--vol=-10000')
+
             self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
                 dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._loop_number), \
-                args=['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)])
+                args=arguments)
             self._loop_number += 1 # Increment loop number
 
     def _restart_check_end(self):
