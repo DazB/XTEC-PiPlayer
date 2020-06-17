@@ -1,4 +1,5 @@
-pip install git+https://github.com/DazB/python-omxplayer-wrapper.git#egg=omxplayer-wrapper
-pip install asteval
-pip install Flask
+sudo pip3 install git+https://github.com/DazB/python-omxplayer-wrapper.git#egg=omxplayer-wrapper
+sudo pip3 install asteval
+sudo pip3 install Flask
+sudo pip3 install keyboard
 sudo apt install python3-gpiozero

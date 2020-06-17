@@ -17,7 +17,7 @@ from mp2_details import config_path
 from tcp_server import PlayerTCPServer
 from player import Player
 from digital_io import DigitalIO
-
+from keyboard_control import KeyboardControl
 
 class App:
     """Main Application class"""
@@ -262,8 +262,8 @@ class App:
                 file.writelines(data)
 
             # Apply changes to the eth0 network interface
-            os.system('sudo ip addr flush dev eth0')
-            os.system('sudo service dhcpcd restart')
+            # os.system('sudo ip addr flush dev eth0')
+            # os.system('sudo service dhcpcd restart')
 
         except Exception as ex:
             print("Error applying network settings: " + str(ex))
@@ -294,6 +294,9 @@ class App:
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
+        
+        # Setup keyboard control
+        self.keyboard_control = KeyboardControl(self.player)
 
         # Check auto start
         if auto_start == '1':
@@ -304,6 +307,7 @@ class App:
         print('App: Cleaning up')
         self.player_tcp_server.server.quit()
         self.player.quit()
+        self.keyboard_quit = True
         sys.exit('App: Quitting. Goodbye')
 
     def is_valid_ipv4(self, ip):
@@ -320,6 +324,7 @@ class App:
     def is_valid_output_io_command(self, command):
         """A little regex to check if the output IO command is valid"""
         return re.search(r'^not_used$|^on_playing$|^pulse_playing$|^on_track$|^pulse_track$|^on_boot$|^pulse_boot$', command) 
+
 
 # Main entry point.
 if __name__ == '__main__':

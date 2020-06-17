@@ -275,11 +275,10 @@ class Player:
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
-        Stops playback, and clears playlist. 
-        Essentially a quit without terminiating the player"""
+        Stops playback (which is same as quit in omxplayer)"""
         print('Player: Stop command')
         if self.playing_video_number == None:
-            return 'Stop failure: no file loaded\n'
+            return 'Stop failure: no file playing\n'
         self.omxplayer_playing.stop()
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
@@ -414,6 +413,10 @@ class Player:
         if video_number == self.loaded_video_number:
             # Video already loaded
             return Load_Result.SUCCESS
+
+        # Quit different loaded video if there is one
+        if self.omxplayer_loaded != None:
+            self.omxplayer_loaded.quit()
 
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)

@@ -6,7 +6,7 @@ from mp2_details import config_path
 
 # import debugpy
 
-class DigitalIO():
+class DigitalIO:
     """The digital IO control for the player"""
     
     def __init__(self, player):
