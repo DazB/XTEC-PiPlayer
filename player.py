@@ -110,30 +110,30 @@ class Player:
                     self.omxplayer_loaded.step()
 
                 if seek_result == Seek_Result.SUCCESS:
-                    return 'Load and seek success'
+                    return 'Load and seek success\n'
                 elif seek_result == Seek_Result.SUCCESS_FRAME_ERROR:
-                    return 'Load success. Seek success with frame seek error. Ignored ff for seek'
+                    return 'Load success. Seek success with frame seek error. Ignored ff for seek\n'
                 elif seek_result == Seek_Result.BAD_FORM:
-                    return 'Load success. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+                    return 'Load success. Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff\n'
                 elif seek_result == Seek_Result.BAD_MM:
-                    return 'Load success. Seek failure: mm must be between 00 and 59'
+                    return 'Load success. Seek failure: mm must be between 00 and 59\n'
                 elif seek_result == Seek_Result.BAD_SS:
-                    return 'Load success. Seek failure: ss must be between 00 and 59'
+                    return 'Load success. Seek failure: ss must be between 00 and 59\n'
                 elif seek_result == Seek_Result.BAD_FF:
                     fps, _ = self._get_fps_duration_metadata(self.loaded_video_path)
-                    return 'Load success. Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')'
+                    return 'Load success. Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')\n'
                 elif seek_result == Seek_Result.TOO_LONG:
-                    return 'Load success. Seek failure: sent time is more than video duration'
+                    return 'Load success. Seek failure: sent time is more than video duration\n'
             else:
-                return 'Load success'
+                return 'Load success\n'
 
         elif load_return_code == Load_Result.NO_FILE:
-            return 'Load failure: Could not find file'
+            return 'Load failure: Could not find file\n'
         elif load_return_code == Load_Result.BAD_COMMAND:
-            return 'Load failure: Incorrect file number sent'
+            return 'Load failure: Incorrect file number sent\n'
         elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
-            return 'Load: File already playing'
-        return 'Load failure: Unknown'
+            return 'Load: File already playing\n'
+        return 'Load failure: Unknown\n'
 
     def play_command(self, msg_data):
         """Play command sent to player. 
@@ -145,13 +145,13 @@ class Player:
         if msg_data != '':
             load_return_code = self._load_video(msg_data)
             if load_return_code == Load_Result.NO_FILE:
-                return 'Play failure: Could not find file'
+                return 'Play failure: Could not find file\n'
             elif load_return_code == Load_Result.BAD_COMMAND:
-                return 'Play failure: Incorrect file number sent'
+                return 'Play failure: Incorrect file number sent\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
                 # If the video has finished, we go back to the start 
-                if self.omxplayer_playing.playback_status() == 'Done':
+                if self.omxplayer_playing.is_done():
                     self.omxplayer_playing.set_position(0)
                     # Restart the thread to check for end of video
                     self._restart_check_end()
@@ -160,7 +160,7 @@ class Player:
         elif self.playing_video_number != None:
             new_video_loaded = False
             # If the video has finished, we go back to the start 
-            if self.omxplayer_playing.playback_status() == 'Done':
+            if self.omxplayer_playing.is_done():
                 self.omxplayer_playing.set_position(0)
                 # Restart the thread to check for end of video
                 self._restart_check_end()
@@ -171,7 +171,7 @@ class Player:
 
         # No file playing or loaded
         else:
-            return 'Play failure: no file playing or loaded'
+            return 'Play failure: no file playing or loaded\n'
 
         if new_video_loaded:
             # New video has been loaded. Switch the players
@@ -185,19 +185,19 @@ class Player:
 
         self.is_looping = False  # Controls loop
 
-        return 'Play success'     
+        return 'Play success\n'     
 
     def pause_command(self, msg_data):
         """Pause command sent to player. 
         Pauses video if playing"""
         print('Player: Pause command')
         if self.playing_video_number == None:
-            return 'Pause failure: no file loaded'
+            return 'Pause failure: no file loaded\n'
         self.omxplayer_playing.pause()
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
 
-        return 'Pause success' 
+        return 'Pause success\n' 
 
     def loop_command(self, msg_data):
         """Loop command sent to player.
@@ -209,13 +209,13 @@ class Player:
         if msg_data != '':
             load_return_code = self._load_video(msg_data)
             if load_return_code == Load_Result.NO_FILE:
-                return 'Loop failure: Could not find file'
+                return 'Loop failure: Could not find file\n'
             elif load_return_code == Load_Result.BAD_COMMAND:
-                return 'Loop failure: Incorrect file number sent'
+                return 'Loop failure: Incorrect file number sent\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
                 # If the video has finished, we go back to the start 
-                if self.omxplayer_playing.playback_status() == 'Done':
+                if self.omxplayer_playing.is_done():
                     self.omxplayer_playing.set_position(0)
                     # Restart the thread to check for end of video
                     self._restart_check_end()
@@ -224,7 +224,7 @@ class Player:
         elif self.playing_video_number != None:
             new_video_loaded = False
             # If the video has finished, we go back to the start 
-            if self.omxplayer_playing.playback_status() == 'Done':
+            if self.omxplayer_playing.is_done():
                 self.omxplayer_playing.set_position(0)
                 # Restart the thread to check for end of video
                 self._restart_check_end()
@@ -235,7 +235,7 @@ class Player:
 
         # No file playing or loaded
         else:
-            return 'Loop failure: no file playing or loaded'
+            return 'Loop failure: no file playing or loaded\n'
 
         if new_video_loaded:
             # New video has been loaded. Switch the players and play
@@ -251,7 +251,7 @@ class Player:
         
         # Return if we're already looping
         if self.is_looping == True:
-            return 'Loop success' 
+            return 'Loop success\n' 
 
         # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
         arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
@@ -265,7 +265,7 @@ class Player:
 
         self.is_looping = True
 
-        return 'Loop success' 
+        return 'Loop success\n' 
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
@@ -273,18 +273,18 @@ class Player:
         Essentially a quit without terminiating the player"""
         print('Player: Stop command')
         if self.playing_video_number == None:
-            return 'Stop failure: no file loaded'
+            return 'Stop failure: no file loaded\n'
         self.omxplayer_playing.stop()
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
-        return 'Stop success'
+        return 'Stop success\n'
 
     def seek_command(self, msg_data):
         """Seek command sent to player.
         Seek to time passed in with message (in ms)"""
         print('Player: Seek command')
         if self.playing_video_number == None:
-            return 'Seek failure: no file loaded'
+            return 'Seek failure: no file loaded\n'
         # Get seek time in seconds and result code
         fps, duration = self._get_fps_duration_metadata(self.playing_video_path)
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, fps, duration)
@@ -294,19 +294,19 @@ class Player:
             self.omxplayer_playing.set_position(seek_time_secs)
             time.sleep(0.1)
             self.omxplayer_playing.step()
-            return 'Seek success'
+            return 'Seek success\n'
         elif seek_result_code == Seek_Result.BAD_FORM:
-            return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff'
+            return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff\n'
         elif seek_result_code == Seek_Result.BAD_MM:
-            return 'Seek failure: mm must be between 00 and 59'
+            return 'Seek failure: mm must be between 00 and 59\n'
         elif seek_result_code == Seek_Result.BAD_SS:
-            return 'Seek failure: ss must be between 00 and 59'
+            return 'Seek failure: ss must be between 00 and 59\n'
         elif seek_result_code == Seek_Result.BAD_FF:
-            return 'Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')'
+            return 'Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')\n'
         elif seek_result_code == Seek_Result.TOO_LONG:
-            return 'Seek failure: sent time is more than video duration'
+            return 'Seek failure: sent time is more than video duration\n'
         elif seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR:
-            return 'Seek success with frame seek error. Ignored ff for seek'
+            return 'Seek success with frame seek error. Ignored ff for seek\n'
 
     def video_mute_command(self, msg_data):
         """Video mute command sent to player.
@@ -316,17 +316,17 @@ class Player:
         try:
             mute_option = int(msg_data)
         except Exception:
-            return 'Video Mute error: incorrect or no option sent'
+            return 'Video Mute error: incorrect or no option sent\n'
         # If we're unmuting
         if mute_option == 0:
             self.black.set_layer(LAYER_UNMUTE)
-            return 'Video Mute success: video unmuted'
+            return 'Video Mute success: video unmuted\n'
         # If we're muting
         elif mute_option == 1:
             self.black.set_layer(LAYER_MUTE)
-            return 'Video Mute success: video muted'
+            return 'Video Mute success: video muted\n'
         else:
-            return 'Video Mute error: specify 0 for unmute and 1 for mute'
+            return 'Video Mute error: specify 0 for unmute and 1 for mute\n'
 
     def audio_mute_command(self, msg_data):
         """Audio mute command sent to player.
@@ -336,7 +336,7 @@ class Player:
         try:
             mute_option = int(msg_data)
         except Exception:
-            return 'Audio Mute error: incorrect or no option sent'
+            return 'Audio Mute error: incorrect or no option sent\n'
         # If we're unmuting
         if mute_option == 0:
             self._audio_muted = False
@@ -354,7 +354,7 @@ class Player:
                 self.omxplayer_loop.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loop.step()
-            return 'Audio Mute success: audio unmuted'
+            return 'Audio Mute success: audio unmuted\n'
         # If we're muting
         elif mute_option == 1:
             self._audio_muted = True
@@ -371,9 +371,9 @@ class Player:
                 time.sleep(0.1)
                 self.omxplayer_loop.step()
 
-            return 'Audio Mute success: audio muted'
+            return 'Audio Mute success: audio muted\n'
         else:
-            return 'Audio Mute error: specify 0 for unmute and 1 for mute'
+            return 'Audio Mute error: specify 0 for unmute and 1 for mute\n'
            
     ################################################################################
     # Utility functions
@@ -508,13 +508,14 @@ class Player:
         while True:
             # Wrap in try except as it is possible for omxplayer to be closed, and thus raise an exception
             try:
-                while (self.omxplayer_playing.playback_status() != 'Done'):
+                while (self.omxplayer_playing.is_done() != True):
                     pass
                 
                 if self.is_looping:
                     # Video has ended, and we are looping. Play same video and move to playing layer.
                     # When moving to playing layer, it automatically plays the video in omx
                     self.omxplayer_loop.set_layer(LAYER_PLAYING)
+                    self.omxplayer_loop.play() # Send play anyway just in case ;)
                     self.omxplayer_playing.quit()
 
                     self.omxplayer_playing = None

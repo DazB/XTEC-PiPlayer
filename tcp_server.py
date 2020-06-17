@@ -89,7 +89,7 @@ class PlayerTCPServer():
                         self.bad_command()
 
             def bad_command(self):
-                self.wfile.write('Error: unknown command'.encode())
+                self.wfile.write('Error: unknown command\n'.encode())
                 
         return ThreadedTCPRequestHandler    # return the class when function is called
 

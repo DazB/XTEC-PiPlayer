@@ -19,8 +19,8 @@ class DigitalIO():
         self.input_2.when_activated = self.input_2_active
         self.input_2.when_deactivated = self.input_2_inactive
 
-        self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO2")
-        self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO3")
+        self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO2", initial_value=False)
+        self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO3", initial_value=False)
         self.player.playing_event = self.player_playing_event           # Player "playing" callback 
         self.player.not_playing_event = self.player_not_playing_event   # Player "not playing" callback 
 

@@ -95,7 +95,7 @@ def net():
             return render_template('save_error.html', error="net.html: Error saving info to ini: " + str(ex))
         
         # Everything is hunky dory. Reboot the system
-        os.system("nohup sudo -b bash -c 'sleep 2; reboot' &>/dev/null;")
+        os.system("nohup sudo -b bash -c 'sleep 2; reboot -f' &>/dev/null;")
         return render_template('submit_ok.html', ip=ip)
 
     # Else load page
