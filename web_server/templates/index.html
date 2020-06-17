@@ -31,6 +31,18 @@
                             <i1>Up to 32 characters</i1>
                         </td>
                     </tr>
+                     <tr>
+                        <td style="height:24px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <h3>Audio Output:</h3>
+                        </td>
+                        <td style="height:24px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <select id="audio" name="audio" size=1>
+                                <option value="hdmi">HDMI</option>
+                                <option value="local">Audio Jack</option>
+                                <option value="both">Both</option>
+                            </select>&nbsp
+                        </td>
+                    </tr>
                 </table>
                 &nbsp
                 <input id="submit" type=submit name="submit" value="Save">&nbsp&nbsp
@@ -39,4 +51,12 @@
         </form>
     </tr>
 </table>
+
+<script>
+    // On load, show saved options, and show or hide track box if needed
+    window.addEventListener("load",function(){
+        document.getElementById("audio").value="{{audio}}";
+    }, false);
+</script>
+
 {% include 'footer.html' %}

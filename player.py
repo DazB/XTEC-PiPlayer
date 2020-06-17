@@ -1,5 +1,6 @@
 from tcp_server import PlayerTCPServer
 from omxplayer.player import OMXPlayer
+from mp2_details import config_path # pylint: disable=import-error
 
 from pathlib import Path
 import glob
@@ -13,6 +14,7 @@ import time
 import numpy as np
 from evento import Event
 import threading
+import configparser
 
 # Constants
 # Video player layers
@@ -254,7 +256,11 @@ class Player:
             return 'Loop success\n' 
 
         # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
-        arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
+        # Get audio setting
+        config = configparser.ConfigParser()
+        config.read(config_path)
+        audio = config['MP2']['audio']
+        arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP), '--adev='+audio]
         if self._audio_muted:
             arguments.append('--vol=-10000')
 
@@ -418,8 +424,12 @@ class Player:
             # Check if we have a match
             if file_number == video_number:
                 # We have a match
+                # Get audio setting
+                config = configparser.ConfigParser()
+                config.read(config_path)
+                audio = config['MP2']['audio']
                 # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
-                arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING)]
+                arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio]
                 if self._audio_muted:
                     arguments.append('--vol=-10000')
                 self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
@@ -522,9 +532,13 @@ class Player:
                     
                     self.omxplayer_playing = self.omxplayer_loop
                     self.omxplayer_loop = None
-                    
+
+                    # Get audio setting
+                    config = configparser.ConfigParser()
+                    config.read(config_path)
+                    audio = config['MP2']['audio']
                     # Reload same video on the "loop layer".
-                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP)]
+                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP), '--adev='+audio]
                     if self._audio_muted:
                         arguments.append('--vol=-10000')
 
@@ -557,18 +571,18 @@ class Player:
 
     def _switch_loaded_to_playing(self):
         """Puts loaded player to top layer"""
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-            self.omxplayer_loop = None
+        # When moving to playing layer, it automatically plays the video in omx
+        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
         
         if self.omxplayer_playing != None:
             self.omxplayer_playing.quit()
             self.omxplayer_playing = None
-            self._check_end_thread.join()
-
-        # When moving to playing layer, it automatically plays the video in omx
-        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
-
+            self._check_end_thread.join()     
+        
+        if self.omxplayer_loop != None:
+            self.omxplayer_loop.quit()
+            self.omxplayer_loop = None
+        
         self.omxplayer_playing = self.omxplayer_loaded
         self.omxplayer_loaded = None
 

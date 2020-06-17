@@ -22,7 +22,9 @@ def index():
             config = configparser.ConfigParser()
             config.read(config_path)
             config['MP2']['devdesc'] = request.form['devdesc']
+            config['MP2']['audio'] = request.form['audio']
             ip = config['MP2']['ip']
+
             with open(config_path, 'w') as configfile:
                 config.write(configfile)
         except Exception as ex:
@@ -38,9 +40,10 @@ def index():
             config = configparser.ConfigParser()
             config.read(config_path)
             dev_desc = config['MP2']['devdesc']
+            audio = config['MP2']['audio']
         except Exception as ex:
             print('index.html: Error getting info: ' + str(ex))
-        return render_template('index.html', dev_desc=dev_desc, version=version)
+        return render_template('index.html', dev_desc=dev_desc, version=version, audio=audio)
 
 # Network settings page
 @app.route('/net.html', methods=['POST', 'GET'])
@@ -196,7 +199,7 @@ def din():
         input2_off_ignore = '0'
 
         try:
-            # Get the content and add to the ini file
+            # Get the content
             config = configparser.ConfigParser()
             config.read(config_path)
             input1_on = config['MP2']['input1_on']
@@ -270,7 +273,7 @@ def dout():
         output2_track = '0'
 
         try:
-            # Get the content and add to the ini file
+            # Get the content
             config = configparser.ConfigParser()
             config.read(config_path)
             output1 = config['MP2']['output1']
@@ -325,7 +328,7 @@ def oth():
         auto_start_track = '0'
 
         try:
-            # Get the content and add to the ini file
+            # Get the content
             config = configparser.ConfigParser()
             config.read(config_path)
             auto_start = config['MP2']['auto_start']
