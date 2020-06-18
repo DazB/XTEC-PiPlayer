@@ -65,7 +65,7 @@ class Player:
         self.is_playing = False             # If we're currently playing something (i.e. not paused)
         self.is_looping = False             # If we're looping the video
         self._audio_muted = False           # If we've muted the video
-        self._loop_number = 0               # Increments whenever a loop occurs, to ensure looping videos don't clash in dbus name
+        self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for looping the video
         
         # Events for Digital I/O
@@ -152,23 +152,17 @@ class Player:
                 return 'Play failure: Incorrect file number sent\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
-                # If the video has finished, we go back to the start 
-                if self.omxplayer_playing.is_done():
-                    self.omxplayer_playing.set_position(0)
-                    # Restart the thread to check for end of video
-                    self._restart_check_end()
 
         # No file number included. Check there is a file already playing
-        elif self.playing_video_number != None:
-            new_video_loaded = False
-            # If the video has finished, we go back to the start 
+        elif self.omxplayer_playing != None:
+            # If the video has finished, restart it
             if self.omxplayer_playing.is_done():
-                self.omxplayer_playing.set_position(0)
-                # Restart the thread to check for end of video
-                self._restart_check_end()
-        
+                self._load_video(self.playing_video_number)
+            else:
+                new_video_loaded = False
+
         # Check there is a file already loaded
-        elif self.loaded_video_number != None:
+        elif self.omxplayer_loaded != None:
             new_video_loaded = True
 
         # No file playing or loaded
@@ -193,8 +187,8 @@ class Player:
         """Pause command sent to player. 
         Pauses video if playing"""
         print('Player: Pause command')
-        if self.playing_video_number == None:
-            return 'Pause failure: no file loaded\n'
+        if self.omxplayer_playing == None:
+            return 'Pause failure: no file playing\n'
         self.omxplayer_playing.pause()
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
@@ -216,23 +210,17 @@ class Player:
                 return 'Loop failure: Incorrect file number sent\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
-                # If the video has finished, we go back to the start 
-                if self.omxplayer_playing.is_done():
-                    self.omxplayer_playing.set_position(0)
-                    # Restart the thread to check for end of video
-                    self._restart_check_end()
 
         # No file number included. Check there is a file already playing
-        elif self.playing_video_number != None:
-            new_video_loaded = False
-            # If the video has finished, we go back to the start 
+        elif self.omxplayer_playing != None:
+            # If the video has finished, restart it
             if self.omxplayer_playing.is_done():
-                self.omxplayer_playing.set_position(0)
-                # Restart the thread to check for end of video
-                self._restart_check_end()
+                self._load_video(self.playing_video_number)
+            else:
+                new_video_loaded = False
 
         # Check there is a file already loaded
-        elif self.loaded_video_number != None:
+        elif self.omxplayer_loaded != None:
             new_video_loaded = True
 
         # No file playing or loaded
@@ -265,9 +253,9 @@ class Player:
             arguments.append('--vol=-10000')
 
         self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
-            dbus_name='org.mpris.MediaPlayer2.omxplayerloop'+ str(self.playing_video_number) + '_' + str(self._loop_number), \
+            dbus_name='org.mpris.MediaPlayer2.omxplayerloop'+ str(self.playing_video_number) + '_' + str(self._dbus_id), \
             args=arguments)
-        self._loop_number += 1 # Increment loop number
+        self._dbus_id += 1 # Increment dbus id 
 
         self.is_looping = True
 
@@ -275,11 +263,18 @@ class Player:
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
-        Stops playback (which is same as quit in omxplayer)"""
+        Stops playback (which is same as quit)"""
         print('Player: Stop command')
-        if self.playing_video_number == None:
+        if self.omxplayer_playing == None:
             return 'Stop failure: no file playing\n'
-        self.omxplayer_playing.stop()
+        if self.omxplayer_playing != None:
+            self.omxplayer_playing.quit()
+            self.omxplayer_playing = None
+            self.playing_video_number = None
+        if self.omxplayer_loop != None:
+            self.omxplayer_loop.quit()
+            self.omxplayer_loop = None
+
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
         return 'Stop success\n'
@@ -288,8 +283,8 @@ class Player:
         """Seek command sent to player.
         Seek to time passed in with message (in ms)"""
         print('Player: Seek command')
-        if self.playing_video_number == None:
-            return 'Seek failure: no file loaded\n'
+        if self.omxplayer_playing == None:
+            return 'Seek failure: no file playing\n'
         # Get seek time in seconds and result code
         fps, duration = self._get_fps_duration_metadata(self.playing_video_path)
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, fps, duration)
@@ -409,14 +404,11 @@ class Player:
 
         if video_number == self.playing_video_number:
             # Video already playing
-            return Load_Result.FILE_ALREADY_PLAYING
-        if video_number == self.loaded_video_number:
+            if not self.omxplayer_playing.is_done():
+                return Load_Result.FILE_ALREADY_PLAYING
+        elif video_number == self.loaded_video_number:
             # Video already loaded
             return Load_Result.SUCCESS
-
-        # Quit different loaded video if there is one
-        if self.omxplayer_loaded != None:
-            self.omxplayer_loaded.quit()
 
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)
@@ -427,6 +419,10 @@ class Player:
             # Check if we have a match
             if file_number == video_number:
                 # We have a match
+                # Quit different loaded video if there is one
+                if self.omxplayer_loaded != None:
+                    self.omxplayer_loaded.quit()
+                    self.omxplayer_loaded = None
                 # Get audio setting
                 config = configparser.ConfigParser()
                 config.read(config_path)
@@ -436,8 +432,9 @@ class Player:
                 if self._audio_muted:
                     arguments.append('--vol=-10000')
                 self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
-                    dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number), \
+                    dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number) + '_' + str(self._dbus_id), \
                     args=arguments)
+                self._dbus_id += 1 # Increment dbus id   
 
                 # Keep track of loaded video
                 self.loaded_video_number = video_number 
@@ -546,9 +543,9 @@ class Player:
                         arguments.append('--vol=-10000')
 
                     self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
-                        dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._loop_number), \
+                        dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._dbus_id), \
                         args=arguments)
-                    self._loop_number += 1 # Increment loop number         
+                    self._dbus_id += 1 # Increment dbus id   
 
                 else:
                     self.not_playing_event(self)
