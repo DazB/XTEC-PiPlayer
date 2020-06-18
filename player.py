@@ -30,6 +30,7 @@ class Load_Result(enum.Enum):
     BAD_COMMAND            = 2
     NO_FILE                = 3
     FILE_ALREADY_PLAYING   = 4
+    FILE_LOAD_ERROR        = 5
 
 class Seek_Result(enum.Enum): 
     """Seek return codes """
@@ -133,6 +134,8 @@ class Player:
             return 'Load failure: Could not find file\n'
         elif load_return_code == Load_Result.BAD_COMMAND:
             return 'Load failure: Incorrect file number sent\n'
+        elif load_return_code == Load_Result.FILE_LOAD_ERROR:
+            return 'Load: File load error. Check file format\n'
         elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
             return 'Load: File already playing\n'
         return 'Load failure: Unknown\n'
@@ -150,8 +153,12 @@ class Player:
                 return 'Play failure: Could not find file\n'
             elif load_return_code == Load_Result.BAD_COMMAND:
                 return 'Play failure: Incorrect file number sent\n'
+            elif load_return_code == Load_Result.FILE_LOAD_ERROR:
+                return 'Play failure: File load error. Check file format\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
+            elif load_return_code != Load_Result.SUCCESS:
+                return 'Play failure: Unknown error loading file\n'
 
         # No file number included. Check there is a file already playing
         elif self.omxplayer_playing != None:
@@ -183,18 +190,6 @@ class Player:
 
         return 'Play success\n'     
 
-    def pause_command(self, msg_data):
-        """Pause command sent to player. 
-        Pauses video if playing"""
-        print('Player: Pause command')
-        if self.omxplayer_playing == None:
-            return 'Pause failure: no file playing\n'
-        self.omxplayer_playing.pause()
-        self.not_playing_event(self) # Notify we're not playing
-        self.is_playing = False
-
-        return 'Pause success\n' 
-
     def loop_command(self, msg_data):
         """Loop command sent to player.
         Sets loop to true, and plays video if not already playing.
@@ -208,8 +203,12 @@ class Player:
                 return 'Loop failure: Could not find file\n'
             elif load_return_code == Load_Result.BAD_COMMAND:
                 return 'Loop failure: Incorrect file number sent\n'
+            elif load_return_code == Load_Result.FILE_LOAD_ERROR:
+                return 'Loop failure: File load error. Check file format\n'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
+            elif load_return_code != Load_Result.SUCCESS:
+                return 'Loop failure: Unknown error loading file\n'
 
         # No file number included. Check there is a file already playing
         elif self.omxplayer_playing != None:
@@ -260,6 +259,18 @@ class Player:
         self.is_looping = True
 
         return 'Loop success\n' 
+
+    def pause_command(self, msg_data):
+        """Pause command sent to player. 
+        Pauses video if playing"""
+        print('Player: Pause command')
+        if self.omxplayer_playing == None:
+            return 'Pause failure: no file playing\n'
+        self.omxplayer_playing.pause()
+        self.not_playing_event(self) # Notify we're not playing
+        self.is_playing = False
+
+        return 'Pause success\n' 
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
@@ -413,9 +424,9 @@ class Player:
         # Search all correctly named video files for video number
         basepath = Path(self.video_folder)
         # Go through every file with 5 digits at the end of file name
-        for video_file in basepath.glob('*[0-9][0-9][0-9][0-9][0-9].mp4'):
+        for video_file in basepath.glob('*[0-9][0-9][0-9][0-9][0-9].*'):
             # Extract number. Get number at end of file name, remove the file extension part, cast into an int
-            file_number = int(re.findall(r'\d\d\d\d\d\.mp4', video_file.name)[0][0:5])
+            file_number = int(re.findall(r'\d\d\d\d\d\.', video_file.name)[0][0:5])
             # Check if we have a match
             if file_number == video_number:
                 # We have a match
@@ -423,18 +434,28 @@ class Player:
                 if self.omxplayer_loaded != None:
                     self.omxplayer_loaded.quit()
                     self.omxplayer_loaded = None
-                # Get audio setting
-                config = configparser.ConfigParser()
-                config.read(config_path)
-                audio = config['MP2']['audio']
-                # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
-                arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio]
-                if self._audio_muted:
-                    arguments.append('--vol=-10000')
-                self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
-                    dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number) + '_' + str(self._dbus_id), \
-                    args=arguments)
-                self._dbus_id += 1 # Increment dbus id   
+
+                try:
+                    # Get audio setting
+                    config = configparser.ConfigParser()
+                    config.read(config_path)
+                    audio = config['MP2']['audio']
+                    # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
+                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio]
+                    if self._audio_muted:
+                        arguments.append('--vol=-10000')
+                    self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
+                        dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number) + '_' + str(self._dbus_id), \
+                        args=arguments)
+                    # This checks if the player has been correctly loaded. Will raise exception if error
+                    self.omxplayer_loaded.can_play() 
+                    self._dbus_id += 1 # Increment dbus id
+
+                except Exception as ex:
+                    # Issue loading. Most likely incorrect file
+                    print('Load: error loading file. Most likely incorrect file format: ' + str(ex))
+                    self.omxplayer_loaded = None
+                    return Load_Result.FILE_LOAD_ERROR
 
                 # Keep track of loaded video
                 self.loaded_video_number = video_number 
