@@ -56,9 +56,11 @@ def net():
             if not is_valid_ipv4(ip):
                 raise ValueError('Entered IP address of ' + ip + ' was incorrect')
 
-            port = request.form['port']
-            if not re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', port):
-                raise ValueError('Entered Port number of ' + port + ' was incorrect')
+            tcp_port = request.form['tcp_port']
+            if not re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', tcp_port):
+                raise ValueError('Entered TCP Port number of ' + tcp_port + ' was incorrect')
+            elif tcp_port == '80':
+                raise ValueError('TCP Port number of ' + tcp_port + ' not allowed')
 
             subnet = request.form['subnet']
             if not is_valid_ipv4(subnet):
@@ -86,7 +88,7 @@ def net():
             config = configparser.ConfigParser()
             config.read(config_path)
             config['MP2']['ip'] = ip
-            config['MP2']['port'] = port
+            config['MP2']['tcp_port'] = tcp_port
             config['MP2']['subnet'] = subnet
             config['MP2']['gateway'] = gateway
             config['MP2']['dns1'] = dns1
@@ -104,7 +106,7 @@ def net():
     # Else load page
     else:
         ip = '*error*'
-        port = '*error*'
+        tcp_port = '*error*'
         subnet = '*error*'
         gateway = '*error*'
         dns1 = '*error*'
@@ -113,14 +115,14 @@ def net():
             config = configparser.ConfigParser()
             config.read(config_path)
             ip = config['MP2']['ip']
-            port = config['MP2']['port']
+            tcp_port = config['MP2']['tcp_port']
             subnet = config['MP2']['subnet']
             gateway = config['MP2']['gateway']
             dns1 = config['MP2']['dns1']
             dns2 = config['MP2']['dns2']
         except Exception as ex:
             print('net.html: Error getting info: ' + str(ex))
-        return render_template('net.html', ip=ip, port=port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2)
+        return render_template('net.html', ip=ip, tcp_port=tcp_port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2)
 
 # Digital inputs page
 @app.route('/din.html', methods=['POST', 'GET'])

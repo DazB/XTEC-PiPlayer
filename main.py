@@ -18,6 +18,7 @@ from tcp_server import PlayerTCPServer
 from player import Player
 from digital_io import DigitalIO
 from keyboard_control import KeyboardControl
+from ftp_server import XtecFTPServer
 
 class App:
     """Main Application class"""
@@ -27,13 +28,16 @@ class App:
 
         # Will use these default values if settings not present or incorrect
         ip = '192.168.1.105'
-        port = '9999'
+        tcp_port = '9999'
         subnet = '255.255.255.0'
         cidr = '24'
         gateway = '192.168.1.1'
         dns1 = '1.1.1.1'
         dns2 = '192.168.1.1'
-        audio = 'both'
+        ftp_user = 'xtec'
+        ftp_password = 'xtec'
+        ftp_port = '21'
+        audio = 'local'
         devdesc = 'MP2 Default Description'
         input1_on = 'nothing'
         input1_off = 'nothing'
@@ -74,14 +78,14 @@ class App:
             else:
                 config['MP2']['ip'] = ip
 
-            # Port number 
-            if config.has_option('MP2', 'port'):
-                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', config['MP2']['port']):
-                    port = config['MP2']['port'] 
+            # TCP Port number 
+            if config.has_option('MP2', 'tcp_port'):
+                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', config['MP2']['tcp_port']):
+                    tcp_port = config['MP2']['tcp_port'] 
                 else:
-                    config['MP2']['port']  = port
+                    config['MP2']['tcp_port']  = tcp_port
             else:
-                config['MP2']['port']  = port
+                config['MP2']['tcp_port']  = tcp_port
 
             # Subnet mask 
             if config.has_option('MP2', 'subnet'):
@@ -119,6 +123,27 @@ class App:
                     config['MP2']['dns2'] = dns2
             else:
                 config['MP2']['dns2'] = dns2
+
+            # FTP Username
+            if not config.has_option('MP2', 'ftp_user'):
+                config['MP2']['ftp_user'] = ftp_user
+            else:
+                ftp_user = config['MP2']['ftp_user']
+
+            # FTP Password
+            if not config.has_option('MP2', 'ftp_password'):
+                config['MP2']['ftp_password'] = ftp_password
+            else:
+                ftp_password = config['MP2']['ftp_password']
+
+            # FTP Port
+            if config.has_option('MP2', 'ftp_port'):
+                if re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', config['MP2']['ftp_port']):
+                    ftp_port = config['MP2']['ftp_port'] 
+                else:
+                    config['MP2']['ftp_port']  = ftp_port
+            else:
+                config['MP2']['ftp_port']  = ftp_port
 
             # Audio 
             if config.has_option('MP2', 'audio'):
@@ -284,7 +309,10 @@ class App:
                 time.sleep(PLAYER_RETRY_DELAY)
 
         # Create and start the tcp server
-        self.player_tcp_server = PlayerTCPServer(self.player, ip, port)
+        self.player_tcp_server = PlayerTCPServer(self.player, ip, tcp_port)
+
+        # Create and start the FTP server
+        self.player_ftp_server = XtecFTPServer(ftp_user, ftp_password, ip, ftp_port)
 
         # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
         os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
