@@ -27,7 +27,7 @@
                             <h3>TCP/IP interface port:</h3>
                         </td>
                         <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
-                            <input id="Port" type=text value="{{tcp_port}}" name="tcp_port" size=5 autocomplete=off>
+                            <input id="tcp_port" type=number value="{{tcp_port}}" name="tcp_port" autocomplete=off min="0" max="65535">
                         </td>
                     </tr>
                     <tr>
@@ -60,6 +60,30 @@
                         </td>
                         <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
                             <input id="DNS2" type=text value="{{dns2}}" name="dns2" size=15 autocomplete=off>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <h3>FTP username:</h3>
+                        </td>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <input id="ftp_user" type=text value="{{ftp_user}}" name="ftp_user" autocomplete=off>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <h3>FTP password:</h3>
+                        </td>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <input id="ftp_password" type=text value="{{ftp_password}}" name="ftp_password" autocomplete=off>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <h3>FTP port:</h3>
+                        </td>
+                        <td style="height:22px;vertical-align:middle;border:#888 inset 0px; padding:4px">
+                            <input id="ftp_port" type=number value="{{ftp_port}}" name="ftp_port" autocomplete=off min="0" max="65535">
                         </td>
                     </tr>
                 </table>

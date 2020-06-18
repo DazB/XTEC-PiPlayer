@@ -78,6 +78,17 @@ def net():
             if not is_valid_ipv4(dns2):
                 raise ValueError('Entered DNS 2 of ' + dns2 + ' was incorrect')
 
+            ftp_user = request.form['ftp_user']
+            ftp_password = request.form['ftp_password']
+            ftp_port = request.form['ftp_port']
+            if not re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', ftp_port):
+                raise ValueError('Entered FTP Port number of ' + ftp_port + ' was incorrect')
+            elif ftp_port == '80':
+                raise ValueError('FTP Port number of ' + ftp_port + ' not allowed')
+            elif ftp_port == tcp_port:
+                raise ValueError('FTP Port and TCP Port must be different')
+
+
         except Exception as ex:
             # A value was incorrectly entered
             return render_template('netdata_error.html', error=str(ex))
@@ -93,6 +104,9 @@ def net():
             config['MP2']['gateway'] = gateway
             config['MP2']['dns1'] = dns1
             config['MP2']['dns2'] = dns2
+            config['MP2']['ftp_user'] = ftp_user
+            config['MP2']['ftp_password'] = ftp_password
+            config['MP2']['ftp_port'] = ftp_port          
 
             with open(config_path, 'w') as configfile:
                 config.write(configfile)
@@ -111,6 +125,9 @@ def net():
         gateway = '*error*'
         dns1 = '*error*'
         dns2 = '*error*'
+        ftp_user = '*error*'
+        ftp_password = '*error*'
+        ftp_port = '*error*'
         try:
             config = configparser.ConfigParser()
             config.read(config_path)
@@ -120,9 +137,13 @@ def net():
             gateway = config['MP2']['gateway']
             dns1 = config['MP2']['dns1']
             dns2 = config['MP2']['dns2']
+            ftp_user = config['MP2']['ftp_user']
+            ftp_password = config['MP2']['ftp_password']
+            ftp_port = config['MP2']['ftp_port']
         except Exception as ex:
             print('net.html: Error getting info: ' + str(ex))
-        return render_template('net.html', ip=ip, tcp_port=tcp_port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2)
+        return render_template('net.html', ip=ip, tcp_port=tcp_port, subnet=subnet, gateway=gateway, dns1=dns1, dns2=dns2, ftp_user=ftp_user, \
+            ftp_password=ftp_password, ftp_port=ftp_port)
 
 # Digital inputs page
 @app.route('/din.html', methods=['POST', 'GET'])

@@ -5,10 +5,11 @@ class KeyboardControl:
 
     def __init__(self, player):
         self.player = player
+        # Set up release handler
         keyboard.on_release(self.key_input)
 
     def key_input(self, key_pressed):
-        """Waits and handles keyboard press"""
+        """Handles keyboard release"""
         if key_pressed.name == 'space':
             if self.player.is_playing:
                 self.player.pause_command('')
