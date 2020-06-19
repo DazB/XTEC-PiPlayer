@@ -297,7 +297,7 @@ class App:
         self.player = None
         player_retry = 0
         PLAYER_RETRY_DELAY = 2
-        PLAYER_MAX_RETRIES = 5
+        PLAYER_MAX_RETRIES = 3
         while self.player is None:
             try:
                 self.player = Player()   # Video player instance
