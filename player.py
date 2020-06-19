@@ -306,6 +306,12 @@ class Player:
             time.sleep(0.1)
             self.omxplayer_playing.step()
             return 'Seek success\n'
+        elif seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR:
+            # Sikh
+            self.omxplayer_playing.set_position(seek_time_secs)
+            time.sleep(0.1)
+            self.omxplayer_playing.step()
+            return 'Seek success with frame seek error. Ignored ff for seek\n'
         elif seek_result_code == Seek_Result.BAD_FORM:
             return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff\n'
         elif seek_result_code == Seek_Result.BAD_MM:
@@ -316,8 +322,6 @@ class Player:
             return 'Seek failure: ff must be between 00 and frame rate (' + str(fps) + ')\n'
         elif seek_result_code == Seek_Result.TOO_LONG:
             return 'Seek failure: sent time is more than video duration\n'
-        elif seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR:
-            return 'Seek success with frame seek error. Ignored ff for seek\n'
 
     def video_mute_command(self, msg_data):
         """Video mute command sent to player.
@@ -496,7 +500,7 @@ class Player:
         seek_frames = int(timestamp_parts[3])
         frame_error = False
         
-        if video_frames == 0:
+        if (video_frames == 0) or (video_frames == None):
             print('Seek: frame seek error. Ignoring ff for seek')
             frame_error = True        
         else:
