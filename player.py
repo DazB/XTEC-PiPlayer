@@ -64,7 +64,6 @@ class Player:
         self.playing_video_path = None      # Playing video file path
         self.loaded_video_path = None       # Loaded video file path
         self.is_playing = False             # If we're currently playing something (i.e. not paused)
-        self.is_looping = False             # If we're looping the video
         self._audio_muted = False           # If we've muted the video
         self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for looping the video
@@ -185,9 +184,7 @@ class Player:
         self.omxplayer_playing.play()
         self.playing_event(self) # Notify we're playing
         self.is_playing = True
-
-        self.is_looping = False  # Controls loop
-
+        self.omxplayer_playing.set_loop(False)
         return 'Play success\n'     
 
     def loop_command(self, msg_data):
@@ -228,7 +225,6 @@ class Player:
 
         if new_video_loaded:
             # New video has been loaded. Switch the players and play
-            self.is_looping = False
             self._switch_loaded_to_playing()
             # Restart the thread to check for end of video
             self._restart_check_end()
@@ -237,26 +233,7 @@ class Player:
         self.omxplayer_playing.play()
         self.playing_event(self) # Notify we're playing
         self.is_playing = True
-        
-        # Return if we're already looping
-        if self.is_looping == True:
-            return 'Loop success\n' 
-
-        # Loads same video on the "loop layer". When the playing video stops, this will play instantly after
-        # Get audio setting
-        config = configparser.ConfigParser()
-        config.read(config_path)
-        audio = config['MP2']['audio']
-        arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP), '--adev='+audio]
-        if self._audio_muted:
-            arguments.append('--vol=-10000')
-
-        self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
-            dbus_name='org.mpris.MediaPlayer2.omxplayerloop'+ str(self.playing_video_number) + '_' + str(self._dbus_id), \
-            args=arguments)
-        self._dbus_id += 1 # Increment dbus id 
-
-        self.is_looping = True
+        self.omxplayer_playing.set_loop(True)
 
         return 'Loop success\n' 
 
@@ -300,17 +277,14 @@ class Player:
         fps, duration = self._get_fps_duration_metadata(self.playing_video_path)
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, fps, duration)
         # Check result of getting the seek time
-        if seek_result_code == Seek_Result.SUCCESS:
+        if (seek_result_code == Seek_Result.SUCCESS) or (seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR):
             # Sikh
             self.omxplayer_playing.set_position(seek_time_secs)
             time.sleep(0.1)
             self.omxplayer_playing.step()
+        if seek_result_code == Seek_Result.SUCCESS:
             return 'Seek success\n'
         elif seek_result_code == Seek_Result.SUCCESS_FRAME_ERROR:
-            # Sikh
-            self.omxplayer_playing.set_position(seek_time_secs)
-            time.sleep(0.1)
-            self.omxplayer_playing.step()
             return 'Seek success with frame seek error. Ignored ff for seek\n'
         elif seek_result_code == Seek_Result.BAD_FORM:
             return 'Seek failure: incorrect seek time sent. Check time is in form hh:mm:ss:ff\n'
@@ -445,7 +419,7 @@ class Player:
                     config.read(config_path)
                     audio = config['MP2']['audio']
                     # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
-                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio]
+                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio, '--video_fifo=0.4']
                     if self._audio_muted:
                         arguments.append('--vol=-10000')
                     self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
@@ -544,38 +518,12 @@ class Player:
             # Wrap in try except as it is possible for omxplayer to be closed, and thus raise an exception
             try:
                 while (self.omxplayer_playing.is_done() != True):
+                    time.sleep(0.1)
                     pass
                 
-                if self.is_looping:
-                    # Video has ended, and we are looping. Play same video and move to playing layer.
-                    # When moving to playing layer, it automatically plays the video in omx
-                    self.omxplayer_loop.set_layer(LAYER_PLAYING)
-                    self.omxplayer_loop.play() # Send play anyway just in case ;)
-                    self.omxplayer_playing.quit()
-
-                    self.omxplayer_playing = None
-                    
-                    self.omxplayer_playing = self.omxplayer_loop
-                    self.omxplayer_loop = None
-
-                    # Get audio setting
-                    config = configparser.ConfigParser()
-                    config.read(config_path)
-                    audio = config['MP2']['audio']
-                    # Reload same video on the "loop layer".
-                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOOP), '--adev='+audio]
-                    if self._audio_muted:
-                        arguments.append('--vol=-10000')
-
-                    self.omxplayer_loop = OMXPlayer(self.playing_video_path, \
-                        dbus_name='org.mpris.MediaPlayer2.omxplayerloop' + str(self.playing_video_number) + '_' + str(self._dbus_id), \
-                        args=arguments)
-                    self._dbus_id += 1 # Increment dbus id   
-
-                else:
-                    self.not_playing_event(self)
-                    self.is_playing = False
-                    return
+                self.not_playing_event(self)
+                self.is_playing = False
+                return
 
             except Exception as ex:
                 # Playing omxplayer has been closed. Looping has been cancelled
