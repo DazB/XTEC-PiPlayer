@@ -419,7 +419,7 @@ class Player:
                     config.read(config_path)
                     audio = config['MP2']['audio']
                     # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
-                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio, '--video_fifo=0.4']
+                    arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio, '--video_fifo=1']
                     if self._audio_muted:
                         arguments.append('--vol=-10000')
                     self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
