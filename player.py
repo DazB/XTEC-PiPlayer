@@ -528,8 +528,6 @@ class Player:
             except Exception as ex:
                 # Playing omxplayer has been closed. Looping has been cancelled
                 print('Exception in check end thread. Most likely playing omxplayer has been closed: ' + str(ex))
-                self.not_playing_event(self)
-                self.is_playing = False
                 return
 
     def _restart_check_end(self):
@@ -544,14 +542,11 @@ class Player:
 
     def _switch_loaded_to_playing(self):
         """Puts loaded player to top layer"""
-        if self.omxplayer_playing != None:
-            self.omxplayer_playing.quit()
-            time.sleep(0.01) # Small delay to give player time to quit
-
         # When moving to playing layer, it automatically plays the video in omx
         self.omxplayer_loaded.set_layer(LAYER_PLAYING)
 
         if self.omxplayer_playing != None:
+            self.omxplayer_playing.quit()
             self._check_end_thread.join()     
             self.omxplayer_playing = None
 
