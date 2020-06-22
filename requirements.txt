@@ -4,3 +4,4 @@ sudo pip3 install Flask
 sudo pip3 install keyboard
 sudo pip3 install pyftpdlib
 sudo apt install python3-gpiozero
+sudo apt-get install ffmpeg
