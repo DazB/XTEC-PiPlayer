@@ -88,8 +88,8 @@ class PlayerTCPServer():
                         print("TCP Handle: Error processing command: " + str(ex))
                         self.wfile.write(('Error processing command\n' + str(ex)).encode())
 
-            def bad_command(self):
-                self.wfile.write('Error: unknown command\n'.encode())
+            def bad_command(self, *args):
+                return 'Error: unknown command\n'
                 
         return ThreadedTCPRequestHandler    # return the class when function is called
 

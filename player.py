@@ -56,7 +56,6 @@ class Player:
         # Set OMX players (None until a video is loaded)
         self.omxplayer_playing = None
         self.omxplayer_loaded = None
-        self.omxplayer_loop = None
 
         # Variables tracking videos playing and loaded 
         self.playing_video_number = None    # Playing video file number
@@ -66,7 +65,7 @@ class Player:
         self.is_playing = False             # If we're currently playing something (i.e. not paused)
         self._audio_muted = False           # If we've muted the video
         self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
-        self._check_end_thread = None       # Thread that is used for looping the video
+        self._check_end_thread = None       # Thread that is used for checking end of video
         
         # Events for Digital I/O
         self.playing_event = Event()        # Playing event. Called when player starts playing
@@ -259,9 +258,6 @@ class Player:
             self.omxplayer_playing.quit()
             self.omxplayer_playing = None
             self.playing_video_number = None
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-            self.omxplayer_loop = None
 
         self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
@@ -338,11 +334,7 @@ class Player:
                 self.omxplayer_loaded.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loaded.step()
-            if self.omxplayer_loop != None:
-                self.omxplayer_loop.set_volume(1)
-                self.omxplayer_loop.set_position(0)
-                time.sleep(0.1)
-                self.omxplayer_loop.step()
+
             return 'Audio Mute success: audio unmuted\n'
         # If we're muting
         elif mute_option == 1:
@@ -354,11 +346,6 @@ class Player:
                 self.omxplayer_loaded.set_position(0)
                 time.sleep(0.1)
                 self.omxplayer_loaded.step()
-            if self.omxplayer_loop != None:
-                self.omxplayer_loop.set_volume(0)
-                self.omxplayer_loop.set_position(0)
-                time.sleep(0.1)
-                self.omxplayer_loop.step()
 
             return 'Audio Mute success: audio muted\n'
         else:
@@ -374,12 +361,8 @@ class Player:
             self.omxplayer_playing.quit()
         if self.omxplayer_loaded != None:
             self.omxplayer_loaded.quit()
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-        # If there is a looping thread, kill it
-        self.is_looping = False
         if self._check_end_thread != None: 
-            self._check_end_thread.join() # wait for end of thread
+            self._check_end_thread.join() # wait for check end thread
         self.black.quit()
 
     def _load_video(self, command):
@@ -526,7 +509,7 @@ class Player:
                 return
 
             except Exception as ex:
-                # Playing omxplayer has been closed. Looping has been cancelled
+                # Playing omxplayer has been closed
                 print('Exception in check end thread. Most likely playing omxplayer has been closed: ' + str(ex))
                 return
 
@@ -542,18 +525,17 @@ class Player:
 
     def _switch_loaded_to_playing(self):
         """Puts loaded player to top layer"""
-        # When moving to playing layer, it automatically plays the video in omx
-        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
-
+        self.omxplayer_loaded.set_layer(LAYER_LOOP)
+        
         if self.omxplayer_playing != None:
+            self.omxplayer_playing.stop()
             self.omxplayer_playing.quit()
             self._check_end_thread.join()     
             self.omxplayer_playing = None
 
-        if self.omxplayer_loop != None:
-            self.omxplayer_loop.quit()
-            self.omxplayer_loop = None
-        
+        # When moving to playing layer, it automatically plays the video in omx
+        self.omxplayer_loaded.set_layer(LAYER_PLAYING)
+       
         self.omxplayer_playing = self.omxplayer_loaded
         self.omxplayer_loaded = None
 
