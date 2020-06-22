@@ -287,8 +287,8 @@ class App:
                 file.writelines(data)
 
             # Apply changes to the eth0 network interface
-            # os.system('sudo ip addr flush dev eth0')
-            # os.system('sudo service dhcpcd restart')
+            os.system('sudo ip addr flush dev eth0')
+            os.system('sudo service dhcpcd restart')
 
         except Exception as ex:
             print("Error applying network settings: " + str(ex))
