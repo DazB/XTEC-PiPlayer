@@ -331,7 +331,7 @@ class App:
         self.keyboard_control = KeyboardControl(self.player)
 
         # Start usb storage listener
-        self.usb_observer = usb_storage.start_listener()
+        usb_storage.start_listener()
 
         # Check auto start
         if auto_start == '1':
@@ -342,7 +342,6 @@ class App:
         print('App: Cleaning up')
         self.player_tcp_server.server.quit()
         self.player.quit()
-        usb_storage.stop_listener(self.usb_observer)
         sys.exit('App: Quitting. Goodbye')
 
     def is_valid_ipv4(self, ip):

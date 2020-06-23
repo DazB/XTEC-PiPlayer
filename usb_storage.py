@@ -1,6 +1,7 @@
 from pyudev import Context, Monitor, MonitorObserver
 import os
 import time
+import re
 
 usb_storage_path = 'usb_mount'
 
@@ -26,32 +27,7 @@ def usb_event_callback(action, device):
     global USBDEV_CONNECTED
 
     if action == 'add':
-        print('Usb storage: usb add')
-        # Store the device values
-        USBDEV_VENDOR = device.get('ID_VENDOR')
-        USBDEV_SERID = device.get('ID_SERIAL')
-        USBDEV_UUID = device.get('ID_FS_UUID')
-        USBDEV_FSTYPE = device.get('ID_FS_TYPE')
-        USBDEV_MODEL = device.get('ID_MODEL')
-        USBDEV_DEVPATH = device.get('DEVNAME')
-        USBDEV_CONNECTED = True
-
-        # Check if the dev path exists
-        if os.path.exists(USBDEV_DEVPATH):
-
-            # Create a mount directory
-            if not os.path.exists(usb_storage_path):
-                os.makedirs(usb_storage_path)
-
-            try:
-                # Mount the dev path to the folder
-                os.system("sudo mount " + USBDEV_DEVPATH + " " + usb_storage_path)
-                # Return the path to the folder from root
-                USBDEV_FILEPATH = os.getcwd() + '/' + usb_storage_path
-
-            except Exception as ex:
-                print('Usb storage: Error mounting usb: ' + str(ex))
-            
+        usb_add(device)
 
     elif action == 'remove':
         print('Usb storage: usb remove')
@@ -83,9 +59,15 @@ def start_listener():
 
     observer = MonitorObserver(monitor, usb_event_callback, name="usbdev")
     observer.start()
-    return observer
+
+    # Check if there is already a usb attached
+    for device in context.list_devices(subsystem='block', DEVTYPE='partition'):
+        if re.search('/dev/s.+', device.get('DEVNAME')):
+            usb_add(device)
+            continue
 
 def get_device_data():
+    """Returns usb device details"""
     if USBDEV_FILEPATH != None:
         global USBDEV_UUID
         global USBDEV_VENDOR
@@ -101,38 +83,39 @@ def get_device_data():
                'DEVPATH': USBDEV_DEVPATH}
     return None
 
-def stop_listener(observer):
-    observer.stop()
+def usb_add(device):
+    """Mounts the usb to a local filesystem"""
+    global USBDEV_UUID
+    global USBDEV_VENDOR
+    global USBDEV_SERID
+    global USBDEV_FSTYPE
+    global USBDEV_MODEL
+    global USBDEV_DEVPATH
+    global USBDEV_FILEPATH
+    global USBDEV_CONNECTED
 
-#start listening for usb device change events
-#you may have to unplug the flashdrive and replug
-# start_listener()
+    print('Usb storage: usb add')
+    # Store the device values
+    USBDEV_VENDOR = device.get('ID_VENDOR')
+    USBDEV_SERID = device.get('ID_SERIAL')
+    USBDEV_UUID = device.get('ID_FS_UUID')
+    USBDEV_FSTYPE = device.get('ID_FS_TYPE')
+    USBDEV_MODEL = device.get('ID_MODEL')
+    USBDEV_DEVPATH = device.get('DEVNAME')
+    USBDEV_CONNECTED = True
 
-# while 1:
-#     time.sleep(1)
+    # Check if the dev path exists
+    if os.path.exists(USBDEV_DEVPATH):
 
-#     #get some identification data 
-#     #returns a dict with keys UUID, SERID (for serial ID), 
-#     #VENDOR (the manufacturer), FSTYPE (file system), MODEL (the model), DEVPATH for the path under ~/dev.
-#     device = get_device_data()
+        # Create a mount directory
+        if not os.path.exists(usb_storage_path):
+            os.makedirs(usb_storage_path)
 
-#     #get the path (currently set for Rpi, can be changed)
-#     # path = get_mount_path_usb_device()
+        try:
+            # Mount the dev path to the folder
+            os.system("sudo mount " + USBDEV_DEVPATH + " " + usb_storage_path)
+            # Return the path to the folder from root
+            USBDEV_FILEPATH = os.getcwd() + '/' + usb_storage_path
 
-#     print("dev: " + str(device))
-#     # print("path: " + str(path))
-#     print("---------------------------------")
-
-
-# context = Context()
-# monitor = Monitor.from_netlink(context)
-# monitor.filter_by(subsystem='block')
-# def print_device_event(device):
-#     print('background event {0.action}: {0.device_path}'.format(device))
-# observer = MonitorObserver(monitor, callback=print_device_event, name='monitor-observer')
-# observer.daemon
-# observer.start()
-
-
-# while 1:
-#     time.sleep(10)
+        except Exception as ex:
+            print('Usb storage: Error mounting usb: ' + str(ex))
