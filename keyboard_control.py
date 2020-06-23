@@ -4,12 +4,16 @@ class KeyboardControl:
     """The keyboard control for the player"""
 
     def __init__(self, player):
-        self.player = player
-        # Set up release handler
-        keyboard.on_release(self.key_input)
+        try:
+            self.player = player
+            # Set up release handler
+            keyboard.on_release(self.key_input)
+        except Exception as ex:
+            print('Keyboard Control: Error starting: ' + str(ex))
 
     def key_input(self, key_pressed):
         """Handles keyboard release"""
+        print('Keyboard Control: Key released: ' + key_pressed.name)
         if key_pressed.name == 'space':
             if self.player.is_playing:
                 self.player.pause_command('')

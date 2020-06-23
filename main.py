@@ -308,17 +308,20 @@ class App:
                 print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
                 time.sleep(PLAYER_RETRY_DELAY)
 
+        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
+        os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
+
+        try:
+            # Run the webserver
+            run_web_server(ip)
+        except Exception as ex:
+            print('Error in starting web server: ' + str(ex))
+
         # Create and start the tcp server
         self.player_tcp_server = PlayerTCPServer(self.player, ip, tcp_port)
 
         # Create and start the FTP server
         self.player_ftp_server = XtecFTPServer(ftp_user, ftp_password, ip, ftp_port)
-
-        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
-        os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
-        
-        # Run the webserver
-        run_web_server(ip)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
@@ -335,7 +338,6 @@ class App:
         print('App: Cleaning up')
         self.player_tcp_server.server.quit()
         self.player.quit()
-        self.keyboard_quit = True
         sys.exit('App: Quitting. Goodbye')
 
     def is_valid_ipv4(self, ip):

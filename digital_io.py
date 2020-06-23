@@ -11,18 +11,21 @@ class DigitalIO:
     
     def __init__(self, player):
         """Initalise I/O"""
-        self.player = player
-        self.input_1 = gpiozero.DigitalInputDevice(pin="GPIO20", pull_up=True)
-        self.input_2 = gpiozero.DigitalInputDevice(pin="GPIO21", pull_up=True)
-        self.input_1.when_activated = self.input_1_active
-        self.input_1.when_deactivated = self.input_1_inactive
-        self.input_2.when_activated = self.input_2_active
-        self.input_2.when_deactivated = self.input_2_inactive
+        try:
+            self.player = player
+            self.input_1 = gpiozero.DigitalInputDevice(pin="GPIO20", pull_up=True)
+            self.input_2 = gpiozero.DigitalInputDevice(pin="GPIO21", pull_up=True)
+            self.input_1.when_activated = self.input_1_active
+            self.input_1.when_deactivated = self.input_1_inactive
+            self.input_2.when_activated = self.input_2_active
+            self.input_2.when_deactivated = self.input_2_inactive
 
-        self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO2", initial_value=False)
-        self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO3", initial_value=False)
-        self.player.playing_event = self.player_playing_event           # Player "playing" callback 
-        self.player.not_playing_event = self.player_not_playing_event   # Player "not playing" callback 
+            self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO2", initial_value=False)
+            self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO3", initial_value=False)
+            self.player.playing_event = self.player_playing_event           # Player "playing" callback 
+            self.player.not_playing_event = self.player_not_playing_event   # Player "not playing" callback 
+        except Exception as ex:
+            print('Digital I/O: Error starting: ' + str(ex))      
 
         # Check boot options
         try:

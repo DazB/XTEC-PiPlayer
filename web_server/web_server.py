@@ -59,7 +59,7 @@ def net():
             tcp_port = request.form['tcp_port']
             if not re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', tcp_port):
                 raise ValueError('Entered TCP Port number of ' + tcp_port + ' was incorrect')
-            elif tcp_port == '80':
+            elif (tcp_port == '80') or (tcp_port == '8080') or (tcp_port == '22'):
                 raise ValueError('TCP Port number of ' + tcp_port + ' not allowed')
 
             subnet = request.form['subnet']
@@ -83,7 +83,7 @@ def net():
             ftp_port = request.form['ftp_port']
             if not re.search(r'^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$', ftp_port):
                 raise ValueError('Entered FTP Port number of ' + ftp_port + ' was incorrect')
-            elif ftp_port == '80':
+            elif (ftp_port == '80') or (ftp_port == '8080') or (ftp_port == '22'):
                 raise ValueError('FTP Port number of ' + ftp_port + ' not allowed')
             elif ftp_port == tcp_port:
                 raise ValueError('FTP Port and TCP Port must be different')
