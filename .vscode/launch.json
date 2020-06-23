@@ -8,6 +8,14 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "sudo": true
+        },
+        {
+            "name": "Python: XTEC Pi-Player",
+            "type": "python",
+            "request": "launch",
             "program": "/home/pi/XTEC-PiPlayer/main.py",
             "console": "integratedTerminal",
             "sudo": true

@@ -19,6 +19,7 @@ from player import Player
 from digital_io import DigitalIO
 from keyboard_control import KeyboardControl
 from ftp_server import XtecFTPServer
+import usb_storage
 
 class App:
     """Main Application class"""
@@ -329,6 +330,9 @@ class App:
         # Setup keyboard control
         self.keyboard_control = KeyboardControl(self.player)
 
+        # Start usb storage listener
+        self.usb_observer = usb_storage.start_listener()
+
         # Check auto start
         if auto_start == '1':
             self.player.play_command(auto_start_track)
@@ -338,6 +342,7 @@ class App:
         print('App: Cleaning up')
         self.player_tcp_server.server.quit()
         self.player.quit()
+        usb_storage.stop_listener(self.usb_observer)
         sys.exit('App: Quitting. Goodbye')
 
     def is_valid_ipv4(self, ip):
