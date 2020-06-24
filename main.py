@@ -58,6 +58,7 @@ class App:
         output2_track = '0'
         auto_start = '0'
         auto_start_track = '0'
+        auto_loop = '0'
 
         try:
             # Go through config file and get / check settings.
@@ -253,6 +254,11 @@ class App:
             else:
                 auto_start_track = config['MP2']['auto_start_track']
 
+            # Auto loop
+            if not config.has_option('MP2', 'auto_loop'):
+                config['MP2']['auto_loop'] = auto_loop
+            else:
+                auto_loop = config['MP2']['auto_loop']
 
             # Write any changes potentially made to config file
             # If it doesn't exist, will create the file with the default values
@@ -335,7 +341,11 @@ class App:
 
         # Check auto start
         if auto_start == '1':
-            self.player.play_command(auto_start_track)
+            # Check if loop
+            if auto_loop == '1':
+                self.player.loop_command(auto_start_track)
+            else:
+                self.player.play_command(auto_start_track)
 
     def cleanup(self, signum, frame):
         """Application cleanup"""

@@ -318,6 +318,7 @@ def oth():
             # Get the content and make sure it's kosher
             auto_start = request.form.get('auto_start', default='0')
             auto_start_track = request.form['auto_start_track']
+            auto_loop = request.form.get('auto_loop', default='0')
 
             # If user selected auto start, make sure there is a track number
             if (auto_start == '1') and (auto_start_track == ''):
@@ -333,6 +334,7 @@ def oth():
             config.read(config_path)
             config['MP2']['auto_start'] = auto_start
             config['MP2']['auto_start_track'] = auto_start_track
+            config['MP2']['auto_loop'] = auto_loop
 
             ip = config['MP2']['ip']
 
@@ -349,18 +351,19 @@ def oth():
     else:
         auto_start = '0'
         auto_start_track = '0'
-
+        auto_loop = '0'
         try:
             # Get the content
             config = configparser.ConfigParser()
             config.read(config_path)
             auto_start = config['MP2']['auto_start']
             auto_start_track = config['MP2']['auto_start_track']
+            auto_loop = config['MP2']['auto_loop']
 
         except Exception as ex:
             print('oth.html: Error getting info: ' + str(ex))
         
-        return render_template('oth.html', auto_start=auto_start, auto_start_track=auto_start_track)
+        return render_template('oth.html', auto_start=auto_start, auto_start_track=auto_start_track, auto_loop=auto_loop)
 
 
 # Network data error
@@ -413,6 +416,6 @@ def run_web_server(host):
     
 # if __name__ == "__main__":
 #     """Runs the webserver"""
-#     app.run()
-#     app.run(host=host, port=8080)
+#     # app.run()
+#     app.run(host='192.168.1.222', port=8080, debug=True)
 

@@ -32,7 +32,7 @@ class PlayerTCPServer():
             except Exception as ex:
                 if tcp_retry == 5:
                     print('TCP Server: Cannot create TCP Server: %s' % ex)
-                
+                    return
                 tcp_retry += 1
                 print('TCP Server: Attempt %d. Error in creating TCP Server: %s' % (tcp_retry, ex))
                 sleep(2)

@@ -19,10 +19,13 @@
                         <h3>Auto Start:</h3>
                     </td>
                     <td style="height:24px;vertical-align:middle;border:#888 inset 0px; padding:4px">
-                        <input id="auto_start" type="checkbox" name="auto_start" value="1">After booting, play
+                        <input id="auto_start" type="checkbox" name="auto_start" value="1" onchange="show_loop(this, 'loop');"> After booting, play
                         track:
                         <input id="auto_start_track" type=number name="auto_start_track" value="{{auto_start_track}}" autocomplete=off min="0"
-                        max="9999" step=1>&nbsp
+                        max="9999" step=1>&nbsp&nbsp
+                        <span id=loop >
+                            <input id="auto_loop" type="checkbox" name="auto_loop" value="1"> Loop
+                        </span>
                     </td>
                 </tr>
             </table>
@@ -34,12 +37,27 @@
 </table>
 
 <script>
-    // On load, show saved options, and show or hide track box if needed
+    // On load, show saved options, and show or hide loop box if needed
     window.addEventListener("load",function(){
         if ("{{auto_start}}" === "1") {
             document.getElementById("auto_start").checked = true;
         }
+        if ("{{auto_loop}}" === "1") {
+            document.getElementById("auto_loop").checked = true;
+        }
+        show_loop(document.getElementById("auto_start"), "loop")
     }, false);
+
+
+    // Will show loop box if needed
+    function show_loop(checkbox, loop) {
+        if (checkbox.checked) {
+            document.getElementById(loop).style.display = "";
+        } else {
+            document.getElementById(loop).style.display = "none";
+        }
+    }
+
 </script>
 
 {% include 'footer.html' %}
