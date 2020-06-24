@@ -25,7 +25,7 @@ class KeyboardControl:
                 if device.get('ID_INPUT_KEYBOARD') == '1':
                     if device.get('DEVNAME') != None:
                         device_name = InputDevice(device.get('DEVNAME'))
-                        thread = threading.Thread(target=self.keyboard_event, args=(device_name,))
+                        thread = threading.Thread(target=self.keyboard_event, args=(device_name,), daemon=True)
                         thread.start()
                         continue
 
@@ -35,12 +35,11 @@ class KeyboardControl:
 
     def usb_event_callback(self, action, device):
         """Callback when a usb device is plugged in"""
-
         if action == 'add' and device.get('ID_INPUT_KEYBOARD') == '1':
             print('Keyboard: input add')
             if device.get('DEVNAME') != None:
                 device_name = InputDevice(device.get('DEVNAME'))
-                thread = threading.Thread(target=self.keyboard_event, args=(device_name,))
+                thread = threading.Thread(target=self.keyboard_event, args=(device_name,), daemon=True)
                 thread.start()
             
     def key_input(self, key_pressed):
