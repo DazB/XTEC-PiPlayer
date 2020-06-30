@@ -408,9 +408,9 @@ def check_output_track(action, track_number, io):
         if track_number == '':
             raise ValueError('Action ' + action + ' specified for ' + io + ' but no track number entered')
 
-def run_web_server(host):
+def run_web_server():
     """Runs the webserver in a seperate thread"""
-    server_thread = threading.Thread(target=app.run, kwargs={'host':host, 'port':8080}, daemon=True)
+    server_thread = threading.Thread(target=app.run, kwargs={'host':'0.0.0.0', 'port':80}, daemon=True)
     server_thread.start()
 
     

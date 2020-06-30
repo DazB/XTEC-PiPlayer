@@ -8,7 +8,7 @@ from pyftpdlib.servers import FTPServer
 class XtecFTPServer:
     """The FTP Server for the player"""
 
-    def __init__(self, username, password, ip, port):
+    def __init__(self, username, password, port):
         """Initalise FTP"""
         try:
             # Instantiate a dummy authorizer for managing 'virtual' users
@@ -27,7 +27,7 @@ class XtecFTPServer:
             self.handler.banner = "MP2 FTP Interface"
 
             # Instantiate FTP server class
-            address = (ip, int(port))
+            address = ('0.0.0.0', int(port))
             self.server = FTPServer(address, self.handler)
 
             # set a limit for connections

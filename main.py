@@ -315,20 +315,17 @@ class App:
                 print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
                 time.sleep(PLAYER_RETRY_DELAY)
 
-        # Redirect port 80 to port 8080 to get webpage to work without having to specify port on browser
-        os.system('sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080')
-
         try:
             # Run the webserver
-            run_web_server(ip)
+            run_web_server()
         except Exception as ex:
             print('Error in starting web server: ' + str(ex))
 
         # Create and start the tcp server
-        self.player_tcp_server = PlayerTCPServer(self.player, ip, tcp_port)
+        self.player_tcp_server = PlayerTCPServer(self.player, tcp_port)
 
         # Create and start the FTP server
-        self.player_ftp_server = XtecFTPServer(ftp_user, ftp_password, ip, ftp_port)
+        self.player_ftp_server = XtecFTPServer(ftp_user, ftp_password, ftp_port)
 
         # Start the Digital I/O
         self.digital_io = DigitalIO(self.player)
