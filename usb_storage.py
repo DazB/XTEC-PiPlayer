@@ -2,8 +2,9 @@ from pyudev import Context, Monitor, MonitorObserver
 import os
 import time
 import re
+import shutil
 
-usb_storage_path = 'usb_mount'
+usb_storage_path = 'testfiles/usb_mount'
 
 # Globals for the device details
 USBDEV_UUID = None
@@ -31,24 +32,14 @@ def usb_event_callback(action, device):
 
     elif action == 'remove':
         print('Usb storage: usb remove')
-        if USBDEV_CONNECTED:    
-            # Clear the device data
-            USBDEV_VENDOR = None
-            USBDEV_SERID = None
-            USBDEV_UUID = None
-            USBDEV_FSTYPE = None
-            USBDEV_MODEL = None
-            USBDEV_DEVPATH = None
-            USBDEV_CONNECTED = False
+        USBDEV_CONNECTED = False
+        try:
+            # Unmount the dev path to the folder
+            os.system("sudo umount " + USBDEV_DEVPATH)
+            shutil.rmtree(USBDEV_FILEPATH)
 
-            try:
-                # Unmount the dev path to the folder
-                os.system("sudo umount " + USBDEV_FILEPATH)
-                os.system("sudo mount " + USBDEV_DEVPATH + " " + usb_storage_path)
-                USBDEV_FILEPATH = None
-
-            except Exception as ex:
-                print('Usb storage: Error unmounting usb: ' + str(ex))
+        except Exception as ex:
+            print('Usb storage: Error unmounting usb: ' + str(ex))
 
 
 def start_listener():
@@ -68,7 +59,7 @@ def start_listener():
 
 def get_device_data():
     """Returns usb device details"""
-    if USBDEV_FILEPATH != None:
+    if USBDEV_CONNECTED:
         global USBDEV_UUID
         global USBDEV_VENDOR
         global USBDEV_SERID
