@@ -383,21 +383,11 @@ class Player:
             # Video already loaded
             return Load_Result.SUCCESS
 
-        # First search in video folder
+        # Search in video folder
         basepath = Path(self.video_folder)
-        load_result = self._search_for_file(basepath, video_number)
-
-        # If we can't find the file, and there is a usb connected, search the usb
-        if load_result == Load_Result.NO_FILE:
-            if usb_storage.USBDEV_CONNECTED:
-                load_result = self._search_for_file(Path(usb_storage.USBDEV_FILEPATH), video_number)
-                return load_result
         
-        return load_result
-
-    def _search_for_file(self, path, video_number):
         # Go through every file with 5 digits at the end of file name
-        for video_file in path.glob('*[0-9][0-9][0-9][0-9][0-9].*'):
+        for video_file in basepath.glob('*[0-9][0-9][0-9][0-9][0-9].*'):
             # Extract number. Get number at end of file name, remove the file extension part, cast into an int
             file_number = int(re.findall(r'\d\d\d\d\d\.', video_file.name)[0][0:5])
             # Check if we have a match
