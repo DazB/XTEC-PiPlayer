@@ -61,7 +61,7 @@ class PlayerTCPServer():
             def handle(self):
                 """Handles incoming TCP data"""
                 while True:
-                    self.data = self.rfile.readline().strip()   # Get data
+                    self.data = self.rfile.readline() # Get data
                     
                     # Keeps connection open until client disconnects
                     if not self.data:
@@ -71,25 +71,28 @@ class PlayerTCPServer():
                     print("{} wrote:".format(self.client_address[0]))
                     print(self.data)
 
-                    # Get first 2 letters, then search dictionary to call corresponding command
+                    # Strip whitespace
+                    self.data = self.data.strip()
+                    
+                    # Get last 2 letters, then search dictionary to call corresponding command
                     # Calls bad_command by default (essentially a switch, but python don't do switch)
-                    command = self.data[0:2].decode().upper()
+                    command = self.data[-2:].decode().upper()
                     command_func = self.command_dict.get(command, self.bad_command)
                     try:
                         # Pass rest of the data packet to the function (could be nothing), and execute player command
-                        msg_data = self.data[2:].decode().upper()
+                        msg_data = self.data[:-2].decode().upper()
                         msg_data = msg_data.lstrip()
                         msg_data = msg_data.strip()
                         response = command_func(msg_data)
-                        # Respond with whatever player command returned
+                        # Respond with data appended with what command returned
                         self.wfile.write(response.encode())
 
                     except Exception as ex:
                         print("TCP Handle: Error processing command: " + str(ex))
-                        self.wfile.write(('Error processing command\n' + str(ex)).encode())
+                        self.wfile.write(('ER\r').encode())
 
             def bad_command(self, *args):
-                return 'Error: unknown command\n'
+                return 'ER\r'
                 
         return ThreadedTCPRequestHandler    # return the class when function is called
 
