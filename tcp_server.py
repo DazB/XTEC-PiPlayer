@@ -71,6 +71,9 @@ class PlayerTCPServer():
                     print("{} wrote:".format(self.client_address[0]))
                     print(self.data)
 
+                    # Send acknowledgment that we've received the data
+                    self.wfile.write(('R\r').encode())
+                    
                     # Strip whitespace
                     self.data = self.data.strip()
                     
