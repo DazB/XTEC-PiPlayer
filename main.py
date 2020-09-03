@@ -38,7 +38,7 @@ class App:
         ftp_user = 'xtec'
         ftp_password = 'xtec'
         ftp_port = '21'
-        audio = 'local'
+        audio = 'hdmi'
         devdesc = 'MP2 Default Description'
         input1_on = 'nothing'
         input1_off = 'nothing'
@@ -149,7 +149,7 @@ class App:
 
             # Audio 
             if config.has_option('MP2', 'audio'):
-                if re.search(r'^hdmi$|^local$|^both$', config['MP2']['audio']):
+                if re.search(r'^hdmi$|^alsa$|^both$', config['MP2']['audio']):
                     audio = config['MP2']['audio']
                 else:
                     config['MP2']['audio'] = audio

@@ -3,6 +3,7 @@ from time import sleep
 import configparser
 import random
 from mp2_details import config_path
+from subprocess import call
 
 # import debugpy
 
@@ -12,16 +13,19 @@ class DigitalIO:
     def __init__(self, player):
         """Initalise I/O"""
         try:
+            # Setup the MCLK out of GPIO 4 for DAC
+            call(["/home/pi/XTEC-PiPlayer/minimal_clk/minimal_clk", "19.23M", "-q"]) 
+
             self.player = player
-            self.input_1 = gpiozero.DigitalInputDevice(pin="GPIO20", pull_up=True)
-            self.input_2 = gpiozero.DigitalInputDevice(pin="GPIO21", pull_up=True)
+            self.input_1 = gpiozero.DigitalInputDevice(pin="GPIO16", pull_up=True)
+            self.input_2 = gpiozero.DigitalInputDevice(pin="GPIO17", pull_up=True)
             self.input_1.when_activated = self.input_1_active
             self.input_1.when_deactivated = self.input_1_inactive
             self.input_2.when_activated = self.input_2_active
             self.input_2.when_deactivated = self.input_2_inactive
 
-            self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO2", initial_value=False)
-            self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO3", initial_value=False)
+            self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO12", initial_value=False)
+            self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO13", initial_value=False)
             self.player.playing_event = self.player_playing_event           # Player "playing" callback 
             self.player.not_playing_event = self.player_not_playing_event   # Player "not playing" callback 
         except Exception as ex:
