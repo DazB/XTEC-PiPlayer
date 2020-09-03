@@ -16,6 +16,7 @@ import numpy as np
 from evento import Event
 import threading
 import configparser
+import gpiozero
 
 # Constants
 # Video player layers
@@ -64,13 +65,16 @@ class Player:
         self.playing_video_path = None      # Playing video file path
         self.loaded_video_path = None       # Loaded video file path
         self.is_playing = False             # If we're currently playing something (i.e. not paused)
-        self._audio_muted = False           # If we've muted the video
         self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for checking end of video
         
         # Events for Digital I/O
         self.playing_event = Event()        # Playing event. Called when player starts playing
         self.not_playing_event = Event()    # Not playing event. Called when player isn't playing. 
+
+        # GPIO for DAC mute. Starts unmuted
+        self.gpio_unmute = gpiozero.DigitalOutputDevice(pin="GPIO22", initial_value=True)
+
 
         # Main folder where all videos are kept
         self.video_folder = '/home/pi/XTEC-PiPlayer/testfiles/' # TODO: this will obvs change
@@ -315,7 +319,7 @@ class Player:
 
     def audio_mute_command(self, msg_data):
         """Audio mute command sent to player.
-        Will mute or unmute audio depending on sent command"""
+        Will mute or unmute audio with GPIO connection to DAC depending on sent command"""
         print('Player: Audio Mute command')
         mute_option = 0
         try:
@@ -324,29 +328,11 @@ class Player:
             return 'ER1\r'
         # If we're unmuting
         if mute_option == 0:
-            self._audio_muted = False
-            if self.omxplayer_playing != None:
-                self.omxplayer_playing.set_volume(1)
-            if self.omxplayer_loaded != None:
-                # Found I have to do this stepping and position nonsense to "kick in"
-                # the mute and unmute. Otherwise can hear very briefly once video starts
-                self.omxplayer_loaded.set_volume(1)
-                self.omxplayer_loaded.set_position(0)
-                time.sleep(0.1)
-                self.omxplayer_loaded.step()
-
+            self.gpio_unmute.on()
             return 'OK1\r'
         # If we're muting
         elif mute_option == 1:
-            self._audio_muted = True
-            if self.omxplayer_playing != None:
-                self.omxplayer_playing.set_volume(0)
-            if self.omxplayer_loaded != None:
-                self.omxplayer_loaded.set_volume(0)
-                self.omxplayer_loaded.set_position(0)
-                time.sleep(0.1)
-                self.omxplayer_loaded.step()
-
+            self.gpio_unmute.off()
             return 'OK2\r'
         else:
             return 'ER2\r'
@@ -404,8 +390,6 @@ class Player:
                     audio = config['MP2']['audio']
                     # Load video. dbus name will be appended with the video number, so every new player will have unique dbus name
                     arguments = ['-g', '--no-osd', '--no-keys', '--start-paused', '--end-paused', '--layer='+str(LAYER_LOADING), '--adev='+audio]
-                    if self._audio_muted:
-                        arguments.append('--vol=-10000')
                     self.omxplayer_loaded = OMXPlayer(str(video_file.resolve()), \
                         dbus_name='org.mpris.MediaPlayer2.omxplayer' + str(video_number) + '_' + str(self._dbus_id), \
                         args=arguments)

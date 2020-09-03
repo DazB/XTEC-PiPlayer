@@ -55,6 +55,7 @@ hdmi_drive=2
 
 # Enable audio (loads snd_bcm2835)
 #dtparam=audio=on
+# Enables I2S audio
 dtoverlay=hifiberry-dac
 dtoverlay=i2s-mmap
 
@@ -73,10 +74,12 @@ gpu_mem=256
 disable_splash=1
 
 # Sets up GPIO pins
-#gpio=20,21=pu,ip
-#gpio=2,3=op,dl
-# Master Clock to DAC, at OSC freq (19.2MHz)
+# I/O
+gpio=16,17=pu,ip
+gpio=12,13=op,dl
+# Master Clock to DAC
 gpio=4=a0
+# DAC mute
 gpio=22=op,dh
 
 # Set up ENC28J60 Ethernet module
