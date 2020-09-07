@@ -5,3 +5,7 @@ __pycache__/
 *.log
 debug.log
 web_server/nohup.out
+nohup.out
+
+# Storage folder
+storage

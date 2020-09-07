@@ -1,7 +1,7 @@
 from tcp_server import PlayerTCPServer
 from omxplayer.player import OMXPlayer
 from mp2_details import config_path # pylint: disable=import-error
-import usb_storage
+import storage
 
 from pathlib import Path
 import glob
@@ -75,9 +75,8 @@ class Player:
         # GPIO for DAC mute. Starts unmuted
         self.gpio_unmute = gpiozero.DigitalOutputDevice(pin="GPIO22", initial_value=True)
 
-
-        # Main folder where all videos are kept
-        self.video_folder = '/home/pi/XTEC-PiPlayer/testfiles/' # TODO: this will obvs change
+        # Main folder where SD card is mounted, and where videos are stored
+        self.video_folder = storage.SD_STORAGE_PATH
 
     ################################################################################
     # Player command functions

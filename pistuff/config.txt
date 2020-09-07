@@ -91,3 +91,6 @@ dtoverlay=pi3-disable-bt
 
 # Disable wifi
 dtoverlay=pi3-disable-wifi
+
+# Enable SD card
+dtoverlay=sdio,sdio_overclock=25,poll_once=off,gpios_34_39
