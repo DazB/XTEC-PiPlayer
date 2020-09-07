@@ -313,6 +313,9 @@ class App:
                     sys.exit('Cannot create Player. Is the path correct? : %s' % ex)
                 player_retry += 1
                 print('Attempt %d. Error in creating player: %s' % (player_retry, ex))
+                # Clear tmp folder of any omxplayer dbus refrences
+                # https://github.com/popcornmix/omxplayer/pull/620
+                os.system('sudo rm /tmp/omxplayer*')
                 time.sleep(PLAYER_RETRY_DELAY)
 
         try:
