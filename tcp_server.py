@@ -108,6 +108,5 @@ class PlayerTCPServer():
 
         def quit(self):
             """Shutdown TCP server"""
-            self.shutdown()
-            self.server_close()
             print('TCP Server: Shutdown')
+            self.shutdown()
