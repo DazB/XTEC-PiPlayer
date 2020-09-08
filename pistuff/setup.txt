@@ -1,0 +1,3 @@
+- To do the video hack:
+https://github.com/nucular/raspi-keygen
+Do with "sudo -i" otherwise permissions won't work

@@ -271,7 +271,7 @@ class Player:
         Seek to time passed in with message (in ms)"""
         print('Player: Seek command')
         if self.omxplayer_playing == None:
-            return 'Seek failure: no file playing\n'
+            return 'ER6\r'
         # Get seek time in seconds and result code
         fps, duration = self._get_fps_duration_metadata(self.playing_video_path)
         seek_result_code, seek_time_secs = self._get_seek_time(msg_data, fps, duration)
@@ -461,19 +461,21 @@ class Player:
         
     def _get_fps_duration_metadata(self, videopath):
         """Function to find the fps and duration of the input video file"""
-        cmd = "ffprobe -v quiet -print_format json -show_streams"
-        args = shlex.split(cmd)
-        args.append(videopath)
-        # run the ffprobe process, decode stdout into utf-8 & convert to JSON
-        ffprobeOutput = subprocess.check_output(args).decode('utf-8')
-        ffprobeOutput = json.loads(ffprobeOutput)
         # try get fps and duration
         fps = 0
         duration = 0
         try:
-            duration = float(ffprobeOutput['streams'][0]['duration'])
+            cmd = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1"
+            args = shlex.split(cmd)
+            args.append(videopath)
+            # run the ffprobe process, decode stdout into utf-8
+            duration = float(subprocess.check_output(args).decode('utf-8'))
+            # Get information from final element in probe output
+            cmd = "ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1"
+            args = shlex.split(cmd)
+            args.append(videopath)
             aeval = Interpreter()
-            fps = aeval(ffprobeOutput['streams'][0]['avg_frame_rate'])
+            fps = aeval(subprocess.check_output(args).decode('utf-8'))
         except Exception as ex:
             print('Error getting metadata: ' + str(ex))
 
