@@ -44,6 +44,7 @@ hdmi_drive=2
 
 # Uncomment some or all of these to enable the optional hardware interfaces
 #dtparam=i2c_arm=on
+
 #dtparam=i2s=on
 #dtparam=spi=on
 
@@ -81,6 +82,8 @@ gpio=12,13=op,dl
 gpio=4=a0
 # DAC mute
 gpio=22=op,dh
+# OLED RST
+gpio=43=op,dh
 
 # Set up ENC28J60 Ethernet module
 dtparam=spi=on 
@@ -94,3 +97,7 @@ dtoverlay=pi3-disable-wifi
 
 # Enable SD card
 dtoverlay=sdio,sdio_overclock=25,poll_once=off,gpios_34_39
+
+# Enable and configure I2C
+dtoverlay=i2c0
+dtparam=i2c_baudrate=400000
