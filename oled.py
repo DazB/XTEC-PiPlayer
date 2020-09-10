@@ -41,49 +41,51 @@ oled_cursor_timer = None
 ################################################################################
 # OLED communication functions
 ################################################################################
-def oled_init():
+def init():
     """OLED intialisation functions. Sends startup data to OLED"""
     global oled_cursor_timer
 
     print('Initalising OLED')
-    oled_write_command(0xAE) # Display off
-    oled_write_command(0x20) # Set Memory Addressing Mode
-    oled_write_command(0x10) # 00,Horizontal Addressing Mode; 01,Vertical Addressing Mode; 10,Page Addressing Mode (RESET); 11,Invalid
-    oled_write_command(0x04) # Set low column address
-    oled_write_command(0x10) # Set high column address
-    oled_write_command(0x40) # Set start line address
-    oled_write_command(0xB0) # Set Page Start Address for Page Addressing Mode,0-7
-    oled_write_command(0x81) # set contrast control register
-    oled_write_command(0xD0) # Default to 50%
-    oled_write_command(0xA1) # Set segment re-map 0 to 127
-    oled_write_command(0xA6) # Set normal colour
-    oled_write_command(0xA8) # Set multiplex ratio(1 to 64)
-    oled_write_command(0x1F) # Set multiplex ratio
-    oled_write_command(0xAD) # Set charge pump enable
-    oled_write_command(0x8B) # Vcc
-    oled_write_command(0x30) # Set Vpp
-    oled_write_command(0xC8) # Set COM Output Scan Direction
-    oled_write_command(0xD3) # Set display vertical offset
-    oled_write_command(0x00) # Not offset
-    oled_write_command(0xD5) # Set display clock divide ratio/oscillator frequency
-    oled_write_command(0x80) # Set divide ratio
-    oled_write_command(0xD9) # Set pre-charge period
-    oled_write_command(0x22)
-    oled_write_command(0xDA) # Set com pins hardware configuration
-    oled_write_command(0x02) # 12
-    oled_write_command(0xDB) # Set vcomh
-    oled_write_command(0x40) # 0x20,0.77xVcc 
-    oled_write_command(0xA4) # Output follows RAM content;0xa5,Output ignores RAM content
-    oled_write_command(0x8D) # Set DC-DC enable
-    oled_write_command(0x14)
-    oled_write_command(0xAF) # Turn on panel
+    clear_DDRAM()
+
+    write_command(0xAE) # Display off
+    write_command(0x20) # Set Memory Addressing Mode
+    write_command(0x10) # 00,Horizontal Addressing Mode; 01,Vertical Addressing Mode; 10,Page Addressing Mode (RESET); 11,Invalid
+    write_command(0x04) # Set low column address
+    write_command(0x10) # Set high column address
+    write_command(0x40) # Set start line address
+    write_command(0xB0) # Set Page Start Address for Page Addressing Mode,0-7
+    write_command(0x81) # set contrast control register
+    write_command(0xD0) # Default to 50%
+    write_command(0xA1) # Set segment re-map 0 to 127
+    write_command(0xA6) # Set normal colour
+    write_command(0xA8) # Set multiplex ratio(1 to 64)
+    write_command(0x1F) # Set multiplex ratio
+    write_command(0xAD) # Set charge pump enable
+    write_command(0x8B) # Vcc
+    write_command(0x30) # Set Vpp
+    write_command(0xC8) # Set COM Output Scan Direction
+    write_command(0xD3) # Set display vertical offset
+    write_command(0x00) # Not offset
+    write_command(0xD5) # Set display clock divide ratio/oscillator frequency
+    write_command(0x80) # Set divide ratio
+    write_command(0xD9) # Set pre-charge period
+    write_command(0x22)
+    write_command(0xDA) # Set com pins hardware configuration
+    write_command(0x02) # 12
+    write_command(0xDB) # Set vcomh
+    write_command(0x40) # 0x20,0.77xVcc 
+    write_command(0xA4) # Output follows RAM content;0xa5,Output ignores RAM content
+    write_command(0x8D) # Set DC-DC enable
+    write_command(0x14)
+    write_command(0xAF) # Turn on panel
 
     # Start cursor timer callback
-    oled_cursor_timer = Timer(0.3, oled_cursor_callback)
+    oled_cursor_timer = Timer(0.3, cursor_callback)
     oled_cursor_timer.daemon = True
     oled_cursor_timer.start()
 
-def oled_tasks():
+def tasks():
     """Main oled task. On each call will iterate and check one character drawn on top 
     and bottom row. If we reach a character and there is a difference to what 
     is shown and what should be shown (e.g. difference in DDRAM or cursor changed) we 
@@ -97,7 +99,7 @@ def oled_tasks():
     draw_top_cursor_flag = False
     draw_bot_cursor_flag = False
     # Increment character position we're drawing
-    screen_pos = (screen_pos + 1) % 16
+    screen_pos = (screen_pos + 1) % OLED_DISPLAY_LINE_SIZE
 
     # If there is a different character on screen to the one stored in DDRAM
     if DDRAM_top[screen_pos] != OLED_display_top[screen_pos].char_displayed:
@@ -158,7 +160,7 @@ def oled_tasks():
                 for i in range(0, font.CHAR_ROW_SIZE):
                     top_row_char_data[i] |= font.CURSOR[i]
         # Draw the resulting character
-        oled_draw_char(top_row_char_data, screen_pos)   # Top row character
+        draw_char(top_row_char_data, screen_pos)   # Top row character
 
     # Same as above
     if draw_bot_flag:
@@ -184,20 +186,20 @@ def oled_tasks():
                 for i in range(0, font.CHAR_ROW_SIZE):
                     bot_row_char_data[i] |= font.CURSOR[i]
         # Draw the resulting character
-        oled_draw_char(bot_row_char_data, screen_pos + 0x40)    # Bottom row character
+        draw_char(bot_row_char_data, screen_pos + 0x40)    # Bottom row character
 
 
-def oled_write_command(command):
+def write_command(command):
     """Send a bytes to the control register"""
     global i2c_bus
     i2c_bus.write_byte_data(OLED_I2C_ADDR, 0x00, command)
 
-def oled_write_display(display_list):
+def write_display(display_list):
     """Send a list of bytes to the display GGDRAM register"""
     global i2c_bus
     i2c_bus.write_i2c_block_data(OLED_I2C_ADDR, 0x40, display_list)
 
-def oled_draw_char(char_data, char_pos):
+def draw_char(char_data, char_pos):
     """ Takes array of character data, and position to draw on OLED screen,
     and draws data"""
     char_index = 1
@@ -214,9 +216,9 @@ def oled_draw_char(char_data, char_pos):
         start_col = (char_pos - 0x40) * 8   # Start column. All fonts are 8 pixels wide
     
     for _ in range(0, 2, 1):
-        oled_write_command(page)
-        oled_write_command(start_col & 0b1111)
-        oled_write_command(0x10 + (start_col >> 4))
+        write_command(page)
+        write_command(start_col & 0b1111)
+        write_command(0x10 + (start_col >> 4))
 
         character_data_list = []
         
@@ -226,12 +228,12 @@ def oled_draw_char(char_data, char_pos):
             char_index = char_index + 2
 
         # Send character data to OLED
-        oled_write_display(character_data_list)
+        write_display(character_data_list)
         char_index = 2  # Move to lower 8 bytes of font
         page += 1
 
 
-def oled_cursor_callback():
+def cursor_callback():
     """Cursor blink callback timer"""
     global oled_cursor_timer, blinking_enabled, blinking_showing, cursor_enabled, cursor_showing
     if blinking_enabled:
@@ -239,7 +241,7 @@ def oled_cursor_callback():
     if cursor_enabled:
         cursor_showing = not cursor_showing
     # Restart timer
-    oled_cursor_timer = Timer(0.3, oled_cursor_callback)
+    oled_cursor_timer = Timer(0.3, cursor_callback)
     oled_cursor_timer.daemon = True
     oled_cursor_timer.start()
 
@@ -249,7 +251,7 @@ def oled_cursor_callback():
 # Functions to interact with the display RAM
 ################################################################################
  
-def oled_write_char_DDRAM(ch):
+def write_char_DDRAM(ch):
     """Write 1 char to the current DDRAM location then increment DDRAM position"""
     global DDRAM_pos, DDRAM_top, DDRAM_bot
     # Below 28h put in top row RAM
@@ -261,32 +263,32 @@ def oled_write_char_DDRAM(ch):
 
     DDRAM_pos += 1
 
-def oled_write_string_DDRAM(str):
-    """Calls oled_write_char_DDRAM multiple times for entire string"""
+def write_string_DDRAM(str):
+    """Calls write_char_DDRAM multiple times for entire string"""
     for char in str:
-        oled_write_char_DDRAM(char)
+        write_char_DDRAM(char)
 
-def oled_clear_DDRAM():
+def clear_DDRAM():
     """Clears DDRAM by setting each element in DDRAM to space character"""
     global DDRAM_top, DDRAM_bot
     for i in range(0, DDRAM_LINE_SIZE, 1):
         DDRAM_top[i] = chr(0x20)
         DDRAM_bot[i] = chr(0x20)
 
-def oled_set_DDRAM_addr(address):
+def set_DDRAM_addr(address):
     """Sets DDRAM address (character position to next write to)"""
     global DDRAM_pos
     DDRAM_pos = address
 
-# Main entry point.
-if __name__ == '__main__':
-    oled_init()
-    oled_clear_DDRAM()
-    oled_set_DDRAM_addr(0x00)
-    oled_write_string_DDRAM('HELLO WORLD')
-    oled_set_DDRAM_addr(0x40)
-    oled_write_string_DDRAM('BIG BOOTY')
-    cursor_enabled = True
-    while True:
-        oled_tasks()
-    print('Done')
+def boot():
+    """Called once in app startup"""
+    init()
+    set_DDRAM_addr(0x00)
+    boot_message = 'MP2'
+    write_string_DDRAM(boot_message)
+    set_DDRAM_addr(0x40)
+    boot_message = 'BOOTING...'
+    write_string_DDRAM(boot_message)
+    # Do tasks enough times to just write boot message
+    for _ in range(0, OLED_DISPLAY_LINE_SIZE + 1, 1):
+        tasks()
