@@ -20,6 +20,7 @@ from digital_io import DigitalIO
 from keyboard_control import KeyboardControl
 from ftp_server import XtecFTPServer
 from storage import Storage
+import oled
 
 class App:
     """Main Application class"""
@@ -382,6 +383,9 @@ if __name__ == '__main__':
     #     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
     #     datefmt='%H:%M:%S',
     #     level=logging.DEBUG)
+    
+    # Start OLED screen. Shows boot message
+    oled.boot()
 
     # Main app instance
     app = App()
@@ -389,3 +393,15 @@ if __name__ == '__main__':
     # Sets app exit signals to call cleanup
     signal.signal(signal.SIGINT, app.cleanup)
     signal.signal(signal.SIGTERM, app.cleanup)
+
+    # Show other stuff
+    oled.clear_DDRAM()
+    oled.set_DDRAM_addr(0x00)
+    oled.write_string_DDRAM('HELLO WORLD!')
+    
+    # Main loop
+    while True:
+        # Perform oled update tasks
+        oled.tasks() 
+        time.sleep(0.002) # Gives CPU time to do other things
+

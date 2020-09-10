@@ -6,3 +6,5 @@ sudo pip3 install pyudev
 sudo apt install python3-gpiozero
 sudo apt-get install ffmpeg
 sudo pip3 install evdev
+sudo apt-get install python3-smbus
+sudo apt-get install i2c-tools
