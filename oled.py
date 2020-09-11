@@ -275,6 +275,18 @@ def clear_DDRAM():
         DDRAM_top[i] = chr(0x20)
         DDRAM_bot[i] = chr(0x20)
 
+def clear_top_DDRAM():
+    """Clears top row of DDRAM by setting each element in DDRAM to space character"""
+    global DDRAM_top
+    for i in range(0, DDRAM_LINE_SIZE, 1):
+        DDRAM_top[i] = chr(0x20)
+
+def clear_bot_DDRAM():
+    """Clears bottom row of DDRAM by setting each element in DDRAM to space character"""
+    global DDRAM_bot
+    for i in range(0, DDRAM_LINE_SIZE, 1):
+        DDRAM_bot[i] = chr(0x20)
+
 def set_DDRAM_addr(address):
     """Sets DDRAM address (character position to next write to)"""
     global DDRAM_pos

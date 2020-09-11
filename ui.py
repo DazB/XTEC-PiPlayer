@@ -34,16 +34,28 @@ class UI:
     def player_playing_event(self, player):
         """Event handler for whenever the player starts playing"""
         if self.page == Page.FRONT:
+            oled.clear_DDRAM()
             oled.set_DDRAM_addr(0x00)
-            oled.write_string_DDRAM('PLAYING         ')
+            if player.is_looping:
+                oled.write_string_DDRAM('LOOPING')
+            else:
+                oled.write_string_DDRAM('PLAYING')
+            
+            oled.set_DDRAM_addr(0x40)
+            file_name = player.playing_video_path.upper().split('/')[-1]
+            if len(file_name) > oled.DDRAM_LINE_SIZE:
+                oled.write_string_DDRAM(file_name[:oled.DDRAM_LINE_SIZE])
+            else:
+                oled.write_string_DDRAM(file_name)
         
     def player_not_playing_event(self, player):
         """Event handler for whenever the player stops playing"""
         if self.page == Page.FRONT:
             # If paused (Stop deletes player)
             if player.omxplayer_playing != None:
+                oled.clear_top_DDRAM()
                 oled.set_DDRAM_addr(0x00)
-                oled.write_string_DDRAM('PAUSED          ')
+                oled.write_string_DDRAM('PAUSED')
             # Player stopped
             else:
                 oled.clear_DDRAM()

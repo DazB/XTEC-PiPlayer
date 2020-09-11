@@ -64,6 +64,7 @@ class Player:
         self.playing_video_path = None      # Playing video file path
         self.loaded_video_path = None       # Loaded video file path
         self.is_playing = False             # If we're currently playing something (i.e. not paused)
+        self.is_looping = False             # If we're looping
         self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for checking end of video
         
@@ -212,14 +213,16 @@ class Player:
             
         self.omxplayer_playing.play()
 
-        # Notify observers we're playing
-        for callback in self.playing_observers:
-            callback(self)
-
         self.is_playing = True
+        self.is_looping = False
         self.omxplayer_playing.set_loop(False)
         self.led_red.off()
         self.led_green.on()
+
+        # Notify observers we're playing
+        for callback in self.playing_observers:
+            callback(self)
+            
         return 'OK1\r'     
 
     def loop_command(self, msg_data):
@@ -274,15 +277,16 @@ class Player:
 
         # Play video
         self.omxplayer_playing.play()
+        self.is_looping = True
+        self.is_playing = True
+        self.omxplayer_playing.set_loop(True)
+        self.led_red.off()
+        self.led_green.on()
 
         # Notify observers we're playing
         for callback in self.playing_observers:
             callback(self)
 
-        self.is_playing = True
-        self.omxplayer_playing.set_loop(True)
-        self.led_red.off()
-        self.led_green.on()
         return 'OK1\r'
 
     def pause_command(self, msg_data):
