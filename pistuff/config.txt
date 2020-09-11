@@ -80,6 +80,8 @@ gpio=16,17=pu,ip
 gpio=12,13=op,dl
 # UI buttons
 gpio=40,41,42=pu,ip
+# UI status LEDs
+gpio=44,45=op,dl
 # Master Clock to DAC
 gpio=4=a0
 # DAC mute

@@ -75,6 +75,9 @@ class Player:
 
         # GPIO for DAC mute. Starts unmuted
         self.gpio_unmute = gpiozero.DigitalOutputDevice(pin="GPIO22", initial_value=True)
+        # Setup operation status led outputs
+        self.led_red = gpiozero.DigitalOutputDevice(pin="GPIO44", initial_value=False)
+        self.led_green = gpiozero.DigitalOutputDevice(pin="GPIO45", initial_value=False)
 
         # Main folder where SD card is mounted, and where videos are stored
         self.video_folder = storage.SD_STORAGE_PATH
@@ -87,8 +90,11 @@ class Player:
         Loads video number sent to it. Can also be combined with seek command to seek 
         to specific position in loaded video."""
         print('Player: Load command')
-        # Check if there is also a seek command with the load
+        self.led_red.blink(on_time=0.1, off_time=0.1)
+        self.led_green.off()
+        return_code = ''
         seek = False
+        # Check if there is also a seek command with the load
         if re.search(r'.*SE', msg_data):
             load_command = re.sub(r'.*SE', '', msg_data)
             seek = True
@@ -116,51 +122,70 @@ class Player:
                     self.omxplayer_loaded.step()
 
                 if seek_result == Seek_Result.SUCCESS:
-                    return 'OK1\r'
+                    return_code = 'OK1\r'
                 elif seek_result == Seek_Result.SUCCESS_FRAME_ERROR:
-                    return 'OK2\r'
+                    return_code = 'OK2\r'
                 elif seek_result == Seek_Result.BAD_FORM:
-                    return 'OK3\r'
+                    return_code = 'OK3\r'
                 elif seek_result == Seek_Result.BAD_MM:
-                    return 'OK4\r'
+                    return_code = 'OK4\r'
                 elif seek_result == Seek_Result.BAD_SS:
-                    return 'OK5\r'
+                    return_code = 'OK5\r'
                 elif seek_result == Seek_Result.BAD_FF:
-                    return 'OK6\r'
+                    return_code = 'OK6\r'
                 elif seek_result == Seek_Result.TOO_LONG:
-                    return 'OK7\r'
+                    return_code = 'OK7\r'
             else:
-                return 'OK1\r'
+                return_code = 'OK1\r'
 
         elif load_return_code == Load_Result.NO_FILE:
-            return 'ER1\r'
+            return_code = 'ER1\r'
         elif load_return_code == Load_Result.BAD_COMMAND:
-            return 'ER2\r'
+            return_code = 'ER2\r'
         elif load_return_code == Load_Result.FILE_LOAD_ERROR:
-            return 'ER3\r'
+            return_code = 'ER3\r'
         elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
-            return 'OK2\r'
-        return 'ER4\r'
+            return_code = 'OK2\r'
+        else:
+            return_code = 'ER4\r'
+        
+        # Set status LED depending on operation and return the return code
+        if re.match(r'OK', return_code):
+            # Success. Turn on green led
+            self.led_green.on()
+            self.led_red.off()
+        else:
+            # Failure. Turn on red led
+            self.led_red.on()
+
+        return return_code
 
     def play_command(self, msg_data):
         """Play command sent to player. 
         Sets loop to false, and plays video if not already playing
         Will try load video if video number included"""
         print('Player: Play command')
+        self.led_red.blink(on_time=0.1, off_time=0.1)
+        self.led_green.off()
+        return_code = ''
         # Check if file number has been included
         new_video_loaded = True
         if msg_data != '':
             load_return_code = self._load_video(msg_data)
             if load_return_code == Load_Result.NO_FILE:
-                return 'ER1\r'
+                return_code = 'ER1\r'
             elif load_return_code == Load_Result.BAD_COMMAND:
-                return 'ER2\r'
+                return_code = 'ER2\r'
             elif load_return_code == Load_Result.FILE_LOAD_ERROR:
-                return 'ER3\r'
+                return_code = 'ER3\r'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
             elif load_return_code != Load_Result.SUCCESS:
-                return 'ER4\r'
+                return_code = 'ER4\r'
+            # If there's been an error
+            if return_code != '':
+                self.led_red.on()
+                return return_code
 
         # No file number included. Check there is a file already playing
         elif self.omxplayer_playing != None:
@@ -176,6 +201,7 @@ class Player:
 
         # No file playing or loaded
         else:
+            self.led_red.on()
             return 'ER5\r'
 
         if new_video_loaded:
@@ -192,6 +218,8 @@ class Player:
 
         self.is_playing = True
         self.omxplayer_playing.set_loop(False)
+        self.led_red.off()
+        self.led_green.on()
         return 'OK1\r'     
 
     def loop_command(self, msg_data):
@@ -199,20 +227,27 @@ class Player:
         Sets loop to true, and plays video if not already playing.
         Will try load video if video number included"""
         print('Player: Loop command')
+        self.led_red.blink(on_time=0.1, off_time=0.1)
+        self.led_green.off()
+        return_code = ''
         # Check if file number has been included
         new_video_loaded = True
         if msg_data != '':
             load_return_code = self._load_video(msg_data)
             if load_return_code == Load_Result.NO_FILE:
-                return 'ER1\r'
+                return_code = 'ER1\r'
             elif load_return_code == Load_Result.BAD_COMMAND:
-                return 'ER2\r'
+                return_code = 'ER2\r'
             elif load_return_code == Load_Result.FILE_LOAD_ERROR:
-                return 'ER3\r'
+                return_code = 'ER3\r'
             elif load_return_code == Load_Result.FILE_ALREADY_PLAYING:
                 new_video_loaded = False
             elif load_return_code != Load_Result.SUCCESS:
-                return 'ER4\r'
+                return_code = 'ER4\r'
+            # If there's been an error
+            if return_code != '':
+                self.led_red.on()
+                return return_code
 
         # No file number included. Check there is a file already playing
         elif self.omxplayer_playing != None:
@@ -228,6 +263,7 @@ class Player:
 
         # No file playing or loaded
         else:
+            self.led_red.on()
             return 'ER5\r'
 
         if new_video_loaded:
@@ -245,7 +281,8 @@ class Player:
 
         self.is_playing = True
         self.omxplayer_playing.set_loop(True)
-
+        self.led_red.off()
+        self.led_green.on()
         return 'OK1\r'
 
     def pause_command(self, msg_data):
@@ -260,13 +297,15 @@ class Player:
         # Notify observers we're not playing
         for callback in self.not_playing_observers:
             callback(self)
-
+        self.led_green.off()
         return 'OK1\r' 
 
     def stop_command(self, msg_data):
         """Stop command sent to player.
         Stops playback (which is same as quit)"""
         print('Player: Stop command')
+        self.led_green.off()
+        self.led_red.off()
         if self.omxplayer_playing == None:
             return 'ER1\r'
         if self.omxplayer_playing != None:
@@ -518,6 +557,8 @@ class Player:
                     callback(self)
 
                 self.is_playing = False
+                self.led_green.off()
+                self.led_red.off()
                 return
 
             except Exception as ex:

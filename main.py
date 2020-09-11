@@ -21,6 +21,7 @@ from keyboard_control import KeyboardControl
 from ftp_server import XtecFTPServer
 from storage import Storage
 import oled
+from ui import UI
 
 class App:
     """Main Application class"""
@@ -340,6 +341,9 @@ class App:
         # Init Storage class. Will start listeners and mounting automatically
         self.storage = Storage()
 
+        # Setup UI
+        self.ui = UI(self.player)
+
         # Check auto start
         if auto_start == '1':
             # Check if loop
@@ -394,11 +398,6 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, app.cleanup)
     signal.signal(signal.SIGTERM, app.cleanup)
 
-    # Show other stuff
-    oled.clear_DDRAM()
-    oled.set_DDRAM_addr(0x00)
-    oled.write_string_DDRAM('HELLO WORLD!')
-    
     # Main loop
     while True:
         # Perform oled update tasks
