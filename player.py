@@ -556,13 +556,12 @@ class Player:
                     time.sleep(0.1)
                     pass
                 
-                # Notify observers we're not playing
-                for callback in self.not_playing_observers:
-                    callback(self)
-
                 self.is_playing = False
                 self.led_green.off()
                 self.led_red.off()
+                # Notify observers we're not playing
+                for callback in self.not_playing_observers:
+                    callback(self)
                 return
 
             except Exception as ex:
