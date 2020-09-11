@@ -3,6 +3,7 @@ import configparser
 import oled
 from mp2_details import config_path
 import enum
+from threading import Timer
 
 class Page(enum.Enum): 
     """Page numbers"""
@@ -22,10 +23,15 @@ class UI:
 
         # Setup internal state
         self.page = Page.FRONT
-        # Event callbacks
+        # Player event callbacks
         self.player.bind_to_playing(self.player_playing_event)           # Player "playing" callback 
         self.player.bind_to_not_playing(self.player_not_playing_event)   # Player "not playing" callback 
         
+        # Front page variables
+        self.file_name = ''
+        self.file_scroll = 0
+        self.scroll_timer = None
+
         # Init screen
         oled.clear_DDRAM()
         oled.set_DDRAM_addr(0x00)
@@ -42,11 +48,17 @@ class UI:
                 oled.write_string_DDRAM('PLAYING')
             
             oled.set_DDRAM_addr(0x40)
-            file_name = player.playing_video_path.upper().split('/')[-1]
-            if len(file_name) > oled.DDRAM_LINE_SIZE:
-                oled.write_string_DDRAM(file_name[:oled.DDRAM_LINE_SIZE])
-            else:
-                oled.write_string_DDRAM(file_name)
+            self.file_name = player.playing_video_path.upper().split('/')[-1]
+            # Shorten name if too long
+            if len(self.file_name) > oled.DDRAM_LINE_SIZE:
+                self.file_name = self.file_name[:oled.DDRAM_LINE_SIZE]
+            # Write file name to screen
+            oled.write_string_DDRAM(self.file_name)
+            # If file longer than display, start the scroll callback timer
+            if len(self.file_name) > oled.OLED_DISPLAY_LINE_SIZE:
+                self.scroll_timer = Timer(2, self.file_name_scroll_callback)
+                self.scroll_timer.daemon = True
+                self.scroll_timer.start()
         
     def player_not_playing_event(self, player):
         """Event handler for whenever the player stops playing"""
@@ -61,3 +73,22 @@ class UI:
                 oled.clear_DDRAM()
                 oled.set_DDRAM_addr(0x00)
                 oled.write_string_DDRAM('NOTHING PLAYING')
+                self.scroll_timer.cancel()
+
+    def file_name_scroll_callback(self):
+        """This callback function will scroll the playing file name on the front page"""
+        oled.set_DDRAM_addr(0x40)
+        if self.file_scroll < (len(self.file_name) - oled.OLED_DISPLAY_LINE_SIZE + 2):
+            self.file_scroll += 1
+            oled.clear_bot_DDRAM()
+            oled.write_string_DDRAM(self.file_name[self.file_scroll: ])
+            self.scroll_timer = Timer(1, self.file_name_scroll_callback)
+        else:
+            self.file_scroll = 0
+            oled.clear_bot_DDRAM()
+            oled.write_string_DDRAM(self.file_name[self.file_scroll: ])
+            self.scroll_timer = Timer(4, self.file_name_scroll_callback)
+
+        self.scroll_timer.daemon = True
+        self.scroll_timer.start()
+
