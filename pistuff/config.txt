@@ -75,9 +75,11 @@ gpu_mem=256
 disable_splash=1
 
 # Sets up GPIO pins
-# I/O
+# Digital I/O
 gpio=16,17=pu,ip
 gpio=12,13=op,dl
+# UI buttons
+gpio=40,41,42=pu,ip
 # Master Clock to DAC
 gpio=4=a0
 # DAC mute

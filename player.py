@@ -13,7 +13,6 @@ import json
 from asteval import Interpreter
 import time
 import numpy as np
-from evento import Event
 import threading
 import configparser
 import gpiozero
@@ -68,9 +67,11 @@ class Player:
         self._dbus_id = 0                   # Increments whenever a video is loaded, to ensure videos don't clash in dbus name
         self._check_end_thread = None       # Thread that is used for checking end of video
         
-        # Events for Digital I/O
-        self.playing_event = Event()        # Playing event. Called when player starts playing
-        self.not_playing_event = Event()    # Not playing event. Called when player isn't playing. 
+        # Events for anyone observing playing and not playing events
+        self.playing_observers = []
+        self.not_playing_observers = []
+        # self.playing_event = Event()        # Playing event. Called when player starts playing
+        # self.not_playing_event = Event()    # Not playing event. Called when player isn't playing. 
 
         # GPIO for DAC mute. Starts unmuted
         self.gpio_unmute = gpiozero.DigitalOutputDevice(pin="GPIO22", initial_value=True)
@@ -184,7 +185,11 @@ class Player:
             self._restart_check_end()
             
         self.omxplayer_playing.play()
-        self.playing_event(self) # Notify we're playing
+
+        # Notify observers we're playing
+        for callback in self.playing_observers:
+            callback(self)
+
         self.is_playing = True
         self.omxplayer_playing.set_loop(False)
         return 'OK1\r'     
@@ -233,7 +238,11 @@ class Player:
 
         # Play video
         self.omxplayer_playing.play()
-        self.playing_event(self) # Notify we're playing
+
+        # Notify observers we're playing
+        for callback in self.playing_observers:
+            callback(self)
+
         self.is_playing = True
         self.omxplayer_playing.set_loop(True)
 
@@ -246,8 +255,11 @@ class Player:
         if self.omxplayer_playing == None:
             return 'ER1\r'
         self.omxplayer_playing.pause()
-        self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
+
+        # Notify observers we're not playing
+        for callback in self.not_playing_observers:
+            callback(self)
 
         return 'OK1\r' 
 
@@ -262,8 +274,11 @@ class Player:
             self.omxplayer_playing = None
             self.playing_video_number = None
 
-        self.not_playing_event(self) # Notify we're not playing
         self.is_playing = False
+        # Notify observers we're not playing
+        for callback in self.not_playing_observers:
+            callback(self)
+
         return 'OK1\r'
 
     def seek_command(self, msg_data):
@@ -349,6 +364,14 @@ class Player:
         if self._check_end_thread != None: 
             self._check_end_thread.join() # wait for check end thread
         self.black.quit()
+
+    def bind_to_playing(self, callback):
+        """Binds a callback to the playing event"""
+        self.playing_observers.append(callback)
+    
+    def bind_to_not_playing(self, callback):
+        """Binds a callback to the not playing event"""
+        self.not_playing_observers.append(callback)
 
     def _load_video(self, command):
         """Tries to loads the video file number passed in"""       
@@ -490,7 +513,10 @@ class Player:
                     time.sleep(0.1)
                     pass
                 
-                self.not_playing_event(self)
+                # Notify observers we're not playing
+                for callback in self.not_playing_observers:
+                    callback(self)
+
                 self.is_playing = False
                 return
 

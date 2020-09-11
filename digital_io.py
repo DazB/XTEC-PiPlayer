@@ -26,8 +26,10 @@ class DigitalIO:
 
             self.output_1 = gpiozero.DigitalOutputDevice(pin="GPIO12", initial_value=False)
             self.output_2 = gpiozero.DigitalOutputDevice(pin="GPIO13", initial_value=False)
-            self.player.playing_event = self.player_playing_event           # Player "playing" callback 
-            self.player.not_playing_event = self.player_not_playing_event   # Player "not playing" callback 
+
+            self.player.bind_to_playing(self.player_playing_event)           # Player "playing" callback 
+            self.player.bind_to_not_playing(self.player_not_playing_event)   # Player "not playing" callback 
+            
         except Exception as ex:
             print('Digital I/O: Error starting: ' + str(ex))      
 
